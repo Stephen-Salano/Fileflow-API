@@ -1,4 +1,4 @@
 package com.stephensalano.fileflow_api.dto.requests;
 
-public record AuthRequest() {
+public record MediaUploadRequest() {
 }
