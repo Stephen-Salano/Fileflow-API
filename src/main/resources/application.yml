@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: Fileflow API
+    # Common configurations
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+# JWT Configuration with environment variables
+jwt:
+  secret-key:  ${ JWT_SECRET_KEY }
+  access-token-expiration: ${ JWT_ACCESS_EXPR }
+  refresh-token-expiration: ${ JWT_REFRESH_EXP }
+
+# File Storage Configurations
