@@ -25,7 +25,7 @@ public class Account implements UserDetails {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @Column(nullable = false, unique = true)
@@ -45,6 +45,9 @@ public class Account implements UserDetails {
 
     @Column(name = "account_non_locked", nullable = false)
     private boolean accountNonLocked = true;
+
+    @Column(name = "anonymized", nullable = false)
+    private boolean anonymized = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
