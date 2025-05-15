@@ -26,11 +26,6 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    @NotBlank(message = "Email cannot be blank")
-    @Email(regexp = "^(?=.{1,64}@)[A-Za-z0-9_-+]+(\\\\.[A-Za-z0-9_-+]+)*@[^-][A-Za-z0-9-+]+(\\\\.[A-Za-z0-9-+]+)*(\\\\.[A-Za-z]{2,})$")
-    private String email;
-
     @Column(name = "first_name")
     private String firstName;
 
@@ -79,7 +74,6 @@ public class User {
      * This allows account relationships to remain intact while removing personal data
      */
     public void anonymize(){
-        this.email = "anonymized" + UUID.randomUUID() + "@anonymized.com";
         this.firstName = null;
         this.secondName = null;
         this.bio = null;

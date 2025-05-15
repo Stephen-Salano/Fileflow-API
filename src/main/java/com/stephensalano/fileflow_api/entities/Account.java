@@ -1,6 +1,7 @@
 package com.stephensalano.fileflow_api.entities;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -25,12 +26,17 @@ public class Account implements UserDetails {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = true)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @Column(nullable = false, unique = true)
     @NotBlank(message = "Username cannot be blank")
     private String username;
+
+    @Column(nullable = false)
+    @NotBlank(message = "Email cannot be blank")
+    @Email(regexp = "^(?=.{1,64}@)[A-Za-z0-9_-+]+(\\\\.[A-Za-z0-9_-+]+)*@[^-][A-Za-z0-9-+]+(\\\\.[A-Za-z0-9-+]+)*(\\\\.[A-Za-z]{2,})$")
+    private String email;
 
     @Column(nullable = false)
     @NotBlank(message = "password field cannot be blank")
@@ -71,13 +77,4 @@ public class Account implements UserDetails {
         return List.of(new SimpleGrantedAuthority(this.role.name()));
     }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
 }
