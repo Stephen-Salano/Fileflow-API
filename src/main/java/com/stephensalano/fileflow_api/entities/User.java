@@ -46,12 +46,14 @@ public class User {
 
     @OneToMany(
             mappedBy = "user",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true,
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.DETACH},
+            orphanRemoval = false,
             fetch = FetchType.LAZY
     )
     private List<Account> accounts = new ArrayList<>();
 
+    @Column(nullable = false)
+    private boolean isDeleted = false;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -70,6 +72,24 @@ public class User {
     @PreUpdate
     protected void onUpdate(){
         this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Anonymizes user data for GDPR compliance without deleting the entity
+     * This allows account relationships to remain intact while removing personal data
+     */
+    public void anonymize(){
+        this.email = "anonymized" + UUID.randomUUID() + "@anonymized.com";
+        this.firstName = null;
+        this.secondName = null;
+        this.bio = null;
+        this.profileImage = null;
+        this.isDeleted = true;
+
+        // break bidirectional relationship but don't delete accounts
+        for (Account account: new ArrayList<>(this.accounts)){
+            account.setAnonymized(true);
+        }
     }
 
 }
