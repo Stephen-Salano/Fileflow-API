@@ -38,7 +38,7 @@ public class Account implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Role role;
+    private Role role = Role.USER; // by default account privileges is set to User
 
     @Column(nullable = false)
     private boolean enabled = false;
