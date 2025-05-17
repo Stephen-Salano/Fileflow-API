@@ -3,6 +3,8 @@ package com.stephensalano.fileflow_api.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,6 +42,9 @@ public class Account implements UserDetails {
 
     @Column(nullable = false)
     @NotBlank(message = "password field cannot be blank")
+    @Size(min = 8, max = 20, message = "Password must be between 8 to 20 characters")
+    @Pattern(regexp =  "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$",
+            message = "Password must contain at least one digit, one lowercase letter, one uppercase character and no whitespace")
     private String password;
 
     @Enumerated(EnumType.STRING)
