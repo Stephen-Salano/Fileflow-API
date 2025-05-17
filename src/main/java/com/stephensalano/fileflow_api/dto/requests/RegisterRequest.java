@@ -19,8 +19,13 @@ public record RegisterRequest(
         message = "Password must contain at least one digit, one lowercase letter, one uppercase character and no whitespace")
         String password,
 
-        String firstname,
-        String lastname
+        @NotBlank(message = "First name is required")
+        @Size(max = 50, message = "First name cannot exceed 50 characters")
+        String firstName,
+
+        @NotBlank(message = "Last name is required")
+        @Size(max = 50, message = "Last name cannot exceed 50 characters")
+        String secondName
 
 ) {
 }
