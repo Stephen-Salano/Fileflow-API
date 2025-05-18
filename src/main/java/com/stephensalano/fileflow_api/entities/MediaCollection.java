@@ -9,13 +9,13 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "medei_collections")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Post {
+public class MediaCollection {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -24,11 +24,15 @@ public class Post {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
-    @Column(name = "title")
-    private String title;
+    @Column(name = "name", length = 100, nullable = false)
+    private String name;
 
-    @Column(name = "content")
-    private String content;
+    @Column(name = "description")
+    private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cover_media_id")
+    private Media coverMedia;
 
     @Column(name = "visibility", length = 20)
     private String visibility;
@@ -39,23 +43,17 @@ public class Post {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<PostMedia> postMedia = new HashSet<>();
-
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Comment> comments = new HashSet<>();
-
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Like> likes = new HashSet<>();
+    @OneToMany(mappedBy = "collection", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<CollectionMedia> collectionMedia = new HashSet<>();
 
     @PrePersist
-    protected void onCreate() {
+    protected void onCreate(){
         this.createdAt = LocalDateTime.now();
         this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
-    protected void onUpdate() {
+    protected void onUpdate(){
         this.updatedAt = LocalDateTime.now();
     }
 }
