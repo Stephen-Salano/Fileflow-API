@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "medei_collections")
+@Table(name = "media_collections")
 @Getter
 @Setter
 @NoArgsConstructor
