@@ -18,4 +18,10 @@ jwt:
   access-token-expiration: ${ JWT_ACCESS_EXPR }
   refresh-token-expiration: ${ JWT_REFRESH_EXP }
 
+# Verification Token properties
+app:
+  verification-token:
+    expiration-minutes: 15 # token expires after 15 minutes
+    token-length: 32 # length of the random bytes used for token generation
+
 # File Storage Configurations
