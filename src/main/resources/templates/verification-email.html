@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #2a6496;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #777777;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 th:text="${appName}">FileFlow</h1>
+        <h2>Email Verification</h2>
+    </div>
+
+    <p>Hello <span th:text="${name}">User</span>,</p>
+
+    <p>Thank you for registering with <span th:text="${appName}">FileFlow</span>. Please verify your email address by clicking the button below:</p>
+
+    <div style="text-align: center;">
+        <a th:href="${verificationUrl}" class="button">Verify Email Address</a>
+    </div>
+
+    <p>If the button above doesn't work, you can copy and paste the following link into your browser:</p>
+
+    <p style="word-break: break-all;"><a th:href="${verificationUrl}" th:text="${verificationUrl}">Verification URL</a></p>
+
+    <p>This verification link will expire in 15 minutes for security reasons.</p>
+
+    <p>If you did not create an account, please ignore this email.</p>
+
+    <p>Best regards,<br>The <span th:text="${appName}">FileFlow</span> Team</p>
+
+    <div class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2025</span> <span th:text="${appName}">FileFlow</span>. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

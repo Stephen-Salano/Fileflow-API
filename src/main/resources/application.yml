@@ -1,6 +1,7 @@
 spring:
   application:
-    name: Fileflow API
+    name: FileFlow
+    frontend-url: ${FRONTEND_URL:http://localhost:3000}
     # Common configurations
   jpa:
     open-in-view: false
@@ -24,4 +25,19 @@ app:
     expiration-minutes: 15 # token expires after 15 minutes
     token-length: 32 # length of the random bytes used for token generation
 
-# File Storage Configurations
+# Email configurations
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enabled: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
