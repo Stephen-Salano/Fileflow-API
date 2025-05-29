@@ -1,7 +1,10 @@
 package com.stephensalano.fileflow_api.services.auth;
 
+import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
+import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.entities.Account;
+import org.springframework.security.core.Authentication;
 
 /**
  * Service responsible for authentication-related operations including
@@ -33,4 +36,25 @@ public interface AuthService {
      */
     boolean verifyEmail(String token);
 
+    /**
+     * Authenticates a user and returns JWT tokens
+     *
+     * @param authRequest the login credentials
+     * @return AuthResponse containing access and refresh tokens
+     */
+    AuthResponse login(AuthRequest authRequest);
+
+    /**
+     * Logs out a user by invalidating their refresh tokens
+     * @param authentication The current user's authentication
+     */
+    void logout(Authentication authentication);
+
+    /**
+     * Refreshes an access token using a valid refresh token
+     *
+     * @param refreshToken the refresh token
+     * @return AuthResponse with new tokens
+     */
+    AuthResponse refreshToken(String refreshToken);
 }

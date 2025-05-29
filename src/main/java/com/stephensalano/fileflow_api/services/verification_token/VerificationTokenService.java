@@ -1,4 +1,4 @@
-package com.stephensalano.fileflow_api.services.token;
+package com.stephensalano.fileflow_api.services.verification_token;
 
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.entities.TokenTypes;
@@ -43,7 +43,7 @@ public interface VerificationTokenService {
     /**
      * Deletes a token after it has been used
      *
-     * @param token
+     * @param token the token to be deleted
      */
     void deleteToken(VerificationToken token);
 }

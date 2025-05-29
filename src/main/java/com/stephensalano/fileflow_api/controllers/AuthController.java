@@ -1,6 +1,8 @@
 package com.stephensalano.fileflow_api.controllers;
 
+import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
+import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.services.auth.AuthService;
 import jakarta.validation.Valid;
@@ -8,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -152,5 +155,128 @@ public class AuthController {
                 "status", "healthy",
                 "service", "auth-controller"
         ));
+    }
+
+
+    /**
+     * Handles user login requests
+     *
+     * @param authRequest The login credentials
+     * @return ResponseEntity with authentication tokens or error message
+     */
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> login(
+            @Valid @RequestBody AuthRequest authRequest
+            ){
+        log.info("Lgin attempt for: {}", authRequest.usernameOrEmail());
+
+        try{
+            AuthResponse authResponse = authService.login(authRequest);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Login successful",
+                    "data", authResponse
+            ));
+        }catch (IllegalArgumentException e){
+            log.warn("Login failed for {}: {}", authRequest.usernameOrEmail(), e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "success", false,
+                            "message", e.getMessage()
+                    ));
+        } catch (IllegalStateException e){
+            log.warn("Account not verified for {}: {}", authRequest.usernameOrEmail(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "success", false,
+                            "message", e.getMessage()
+                    ));
+        } catch (Exception e){
+            log.error("Unexpected error during login for {}: {}",
+                    authRequest.usernameOrEmail(), e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Login failed due to server error. Please try again later."
+                    ));
+        }
+
+    }
+
+    /**
+     * Handles user logout requests
+     *
+     * @param authentication The current user's authentication
+     * @return ResponseEntity with logout confirmation
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, Object>>logout(Authentication authentication){
+        try{
+            authService.logout(authentication);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "logout successful"
+            ));
+        } catch (Exception e){
+            log.error("Error during logout: {}", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "logout failed due to server error"
+                    ));
+        }
+    }
+
+    /**
+     * Handles token refresh requests
+     *
+     * @param requestBody Map containing the refresh token
+     * @return ResponseEntity with new tokens or error message
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, Object>> refreshToken(
+            @RequestBody Map<String, String> requestBody
+    ){
+        String refreshToken = requestBody.get("refresh_token");
+
+        if(refreshToken == null || refreshToken.trim().isEmpty()){
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "success", false,
+                            "message", "refresh token is required"
+                    ));
+        }
+
+        try{
+            AuthResponse authResponse = authService.refreshToken(refreshToken);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Token refreshed successfully",
+                    "data", authResponse
+            ));
+        } catch (IllegalArgumentException e){
+            log.warn("Token refresh failed: {}", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "success", false,
+                            "message", e.getMessage()
+                    ));
+
+        } catch (Exception e) {
+            log.error("Unexpected error during token refresh: {}", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Token refresh failed due to server error"
+                    ));
+        }
     }
 }

@@ -1,4 +1,4 @@
-package com.stephensalano.fileflow_api.services.token;
+package com.stephensalano.fileflow_api.services.verification_token;
 
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.entities.TokenTypes;
@@ -6,7 +6,6 @@ import com.stephensalano.fileflow_api.entities.VerificationToken;
 import com.stephensalano.fileflow_api.repository.VerificationTokenRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.security.saml2.Saml2RelyingPartyProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -6,6 +6,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,6 +32,7 @@ import java.util.function.Function;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class JwtService {
 
     // Injecting JWT configuration from application.yaml
@@ -88,7 +90,7 @@ public class JwtService {
                 // Set when the token was issued
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 // Set en the token expires
-                .setExpiration(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 // Sign the token with our secret key
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 // Build the final token string
