@@ -27,7 +27,7 @@ public class EmailServiceImpl implements EmailService{
     private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
 
-    @Value("${spring.frontend-url}")
+    @Value("${spring.application.frontend-url}")
     private String frontendUrl;
 
     @Value("${spring.mail.username}")

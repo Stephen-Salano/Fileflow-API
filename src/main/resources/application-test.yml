@@ -14,6 +14,24 @@ spring:
     console:
       enabled: true
       path: /h2-console
+    # Email configurations
+
+  # Email configurations
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enabled: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 # Test-specific Logging
 logging:

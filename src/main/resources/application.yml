@@ -15,29 +15,12 @@ spring:
       max-request-size: 10MB
 # JWT Configuration with environment variables
 jwt:
-  secret-key:  ${ JWT_SECRET_KEY }
-  access-token-expiration: ${ JWT_ACCESS_EXPR }
-  refresh-token-expiration: ${ JWT_REFRESH_EXP }
+  secret-key:  ${JWT_SECRET_KEY}
+  access-token-expiration: ${JWT_ACCESS_EXPR}
+  refresh-token-expiration: ${JWT_REFRESH_EXPR}
 
 # Verification Token properties
 app:
   verification-token:
     expiration-minutes: 15 # token expires after 15 minutes
     token-length: 32 # length of the random bytes used for token generation
-
-# Email configurations
-  mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enabled: true
-            required: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000

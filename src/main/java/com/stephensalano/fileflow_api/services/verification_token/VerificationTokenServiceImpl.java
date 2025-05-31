@@ -5,6 +5,7 @@ import com.stephensalano.fileflow_api.entities.TokenTypes;
 import com.stephensalano.fileflow_api.entities.VerificationToken;
 import com.stephensalano.fileflow_api.repository.VerificationTokenRepository;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,16 +16,16 @@ import java.util.Base64;
 import java.util.Optional;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class VerificationTokenServiceImpl implements VerificationTokenService{
 
     // Inject the Repository
     private final VerificationTokenRepository verificationTokenRepository;
 
-    @Value("${app.verification-token.expiration-minutes: 15}")
+    @Value("${app.verification-token.expiration-minutes:15}")
     private int expirationMinutes;
 
-    @Value("${app.verification-token.token-length: 32}")
+    @Value("${app.verification-token.token-length:32}")
     private int tokenLength;
 
     // SecureRandom is used to generate cryptographically strong random numbers
