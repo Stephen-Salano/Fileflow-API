@@ -37,7 +37,7 @@ public class Account implements UserDetails {
 
     @Column(nullable = false)
     @NotBlank(message = "Email cannot be blank")
-    @Email(regexp = "^(?=.{1,64}@)[A-Za-z0-9_-+]+(\\\\.[A-Za-z0-9_-+]+)*@[^-][A-Za-z0-9-+]+(\\\\.[A-Za-z0-9-+]+)*(\\\\.[A-Za-z]{2,})$")
+    @Email
     private String email;
 
     @Column(nullable = false)
