@@ -168,7 +168,7 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> login(
             @Valid @RequestBody AuthRequest authRequest
             ){
-        log.info("Lgin attempt for: {}", authRequest.usernameOrEmail());
+        log.info("Login attempt for: {}", authRequest.usernameOrEmail());
 
         try{
             AuthResponse authResponse = authService.login(authRequest);
