@@ -1,4 +1,4 @@
-package com.stephensalano.fileflow_api.controllers;
+package com.stephensalano.fileflow_api.controllers.integration_tests;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest // This starts up the full Spring application for testing
 @AutoConfigureMockMvc // This sets up MockMvc to make HTTP
 @ActiveProfiles("test")
-public class AuthControllerIntegrationTest {
+public class AuthControllerHealthIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc; // This lets us make fake HTTP requests to our app

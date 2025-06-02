@@ -1,7 +1,8 @@
-package com.stephensalano.fileflow_api.controllers;
+package com.stephensalano.fileflow_api.controllers.unit_tests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stephensalano.fileflow_api.configs.security.JwtService;
+import com.stephensalano.fileflow_api.controllers.AuthController;
 import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
 import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.services.auth.AuthService;

@@ -1,6 +1,7 @@
-package com.stephensalano.fileflow_api.controllers;
+package com.stephensalano.fileflow_api.controllers.unit_tests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stephensalano.fileflow_api.controllers.AuthController;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.entities.Role;
@@ -10,7 +11,6 @@ import com.stephensalano.fileflow_api.services.auth.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * It's fast because it doesn't start the full Spring application.
  */
 @WebMvcTest(AuthController.class) // Only loads the web layer for AuthController
-public class AuthControllerUnitTest {
+public class AuthControllerRegisterUnitTest {
 
     @Autowired
     private MockMvc mockMvc; // Simulates HTTP requests to our controller
