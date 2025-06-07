@@ -25,7 +25,7 @@ public class EmailConfig {
      */
 
     @Bean
-    @Description("Thymelead template resolver for emails")
+    @Description("Thymeleaf template resolver for emails")
     public ITemplateResolver emailTemplateResolver(){
         /*
          * The ClassLoaderResolver tells Thymeleaf where and how to find your email templates

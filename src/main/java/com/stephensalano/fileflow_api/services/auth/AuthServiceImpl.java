@@ -5,6 +5,7 @@ import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
 import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.entities.*;
+import com.stephensalano.fileflow_api.events.OnRegistrationCompleteEvent;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
 import com.stephensalano.fileflow_api.repository.RefreshTokenRepository;
 import com.stephensalano.fileflow_api.repository.UserRepository;
@@ -12,6 +13,7 @@ import com.stephensalano.fileflow_api.services.email.EmailService;
 import com.stephensalano.fileflow_api.services.verification_token.VerificationTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -38,34 +40,51 @@ public class AuthServiceImpl  implements AuthService{
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
     public Account registerUser(RegisterRequest request) {
-        // Validate the username and email are not already taken
-        validateRegistrationData(request);
+        try {
+            // Validate the username and email are not already
+            log.debug("Validating registration data (username/email) for: {}", request.username());
+            validateRegistrationData(request);
+            log.debug("Validation passed: username/email are free.");
 
-        // Create and save the User entity
-        User user = createUser(request);
-        User savedUser = userRepository.save(user);
+            // Create and save the User entity
+            User user = createUser(request);
+            log.debug("Attempting to save User entity: {}", user);
+            User savedUser = userRepository.save(user);
+            log.debug("Saved User: {}", savedUser);
 
-        // Create and save the Account entity
-        Account account = createAccount(request, savedUser);
-        Account savedAccount = accountRepository.save(account);
+            // Create and save the Account entity
+            Account account = createAccount(request, savedUser);
+            log.debug("Attempting to save Account entity: {}", account);
+            Account savedAccount = accountRepository.save(account);
+            log.debug("Saved Account: {}", savedAccount);
 
-        // Generate Verification token
-        VerificationToken verificationToken = verificationTokenService.createToken(
-                savedAccount, TokenTypes.VERIFICATION);
 
-        // Send verification email
-        boolean emailSent = emailService.sendVerificationEmail(
-                request.email(), request.username(), verificationToken.getToken()
-        );
+            // Generate Verification token
+            log.debug("Creating VerificationToken for accountId={}", savedAccount.getId());
+            VerificationToken verificationToken = verificationTokenService.createToken(
+                    savedAccount, TokenTypes.VERIFICATION);
+            log.debug("Created VerificationToken: token={} expiresAt={}",
+                    verificationToken.getToken(),
+                    verificationToken.getExpiryDate());
 
-        if (!emailSent){
-            log.warn("Failed to send verification email to {}", request.email());
+            eventPublisher.publishEvent(new OnRegistrationCompleteEvent(
+                    this,
+                    request.email(),
+                    request.username(),
+                    verificationToken.getToken()
+            ));
+            log.info("Registration completed for user: {}. Verification email will be sent after transaction commit.",
+                    savedAccount.getUsername());
+            return savedAccount;
+        } catch (Exception e) {
+            log.error("Registration failed INSIDE registerUser(): {}", e.getMessage(), e);
+            throw e;
         }
-        return savedAccount;
 
     }
 

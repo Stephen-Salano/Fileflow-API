@@ -8,6 +8,7 @@ import com.stephensalano.fileflow_api.services.auth.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -79,9 +80,13 @@ public class AuthController {
                             "message", e.getMessage()
                     ));
         }catch (Exception e){
-            // Handle unexpected errors
-            log.error("Unexpected error during registration for {} : {}",
-                    registerRequest.username(), e.getMessage());
+            // Print the full stack trace of the *root cause*
+            Throwable root = NestedExceptionUtils.getRootCause(e);
+            if (root != null) {
+                log.error("Registration failed: root cause = {}", root.getMessage(), root);
+            } else {
+                log.error("Registration failed: {}", e.getMessage(), e);
+            }
 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
