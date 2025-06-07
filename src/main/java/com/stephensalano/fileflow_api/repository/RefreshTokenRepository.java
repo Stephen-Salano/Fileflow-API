@@ -16,7 +16,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     Optional<RefreshToken> findByAccount(Account account);
     void deleteByAccount(Account account);
 
-    @Modifying
+    @Modifying(clearAutomatically = true) // clear the entity manager after this query
     @Query("UPDATE RefreshToken rt SET rt.invalidated = true WHERE rt.account = :account")
     void invalidateAllByAccount(Account account);
 }
