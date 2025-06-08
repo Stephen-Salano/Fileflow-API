@@ -6,6 +6,7 @@ import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
 import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.entities.*;
 import com.stephensalano.fileflow_api.events.OnRegistrationCompleteEvent;
+import com.stephensalano.fileflow_api.events.OnWelcomeEvent;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
 import com.stephensalano.fileflow_api.repository.RefreshTokenRepository;
 import com.stephensalano.fileflow_api.repository.UserRepository;
@@ -117,7 +118,11 @@ public class AuthServiceImpl  implements AuthService{
         verificationTokenService.deleteToken(verificationToken);
 
         // Send welcome email
-        emailService.sendWelcomeEmail(account.getEmail(), account.getUsername());
+        eventPublisher.publishEvent(new OnWelcomeEvent(
+                this,
+                account.getEmail(),
+                account.getUsername()
+        ));
 
         log.info("Email verified successfully for user: {}", account.getUsername());
         return true;

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -40,7 +41,7 @@ public class EmailServiceImpl implements EmailService{
     private String appName;
 
     @Override
-    public boolean sendVerificationEmail(String to, String username, String token) {
+    public void sendVerificationEmail(String to, String username, String token) {
         try{
             // prepare verification link(URL) with token
             String verificationUrl = frontendUrl + "/verify?token=" + token;
@@ -74,15 +75,13 @@ public class EmailServiceImpl implements EmailService{
 
             mailSender.send(message);
             log.info("Verification email sent to: {}", to);
-            return true;
         } catch (MessagingException e){
             log.error("Failed to send verification email to{}: {}", to, e.getMessage());
-            return false;
         }
     }
 
     @Override
-    public boolean sendWelcomeEmail(String to, String username) {
+    public void sendWelcomeEmail(String to, String username) {
         try{
             // Set up the Thymeleaf context with variables for the template
             Context context = new Context();
@@ -106,10 +105,8 @@ public class EmailServiceImpl implements EmailService{
 
             mailSender.send(message);
             log.info("Welcome email sent to: {}", to);
-            return true;
         } catch (MessagingException e){
             log.error("Failed to send the welcome email to {}: {}", to, e.getMessage());
-            return false;
         }
     }
 }

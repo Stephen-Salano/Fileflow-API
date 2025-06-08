@@ -3,6 +3,7 @@ package com.stephensalano.fileflow_api.events;
 import com.stephensalano.fileflow_api.services.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -27,16 +28,31 @@ public class RegistrationListener {
      * @param event
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async("emailTaskExecutor")
     public void handleOnRegistrationComplete(OnRegistrationCompleteEvent event){
-        String to = event.getEmail();
-        String username = event.getUsername();
-        String token = event.getToken();
+        try{
+            log.info("Async listener running in thread: {}", Thread.currentThread().getName());
+            emailService.sendVerificationEmail(
+                    event.getEmail(),
+                    event.getUsername(),
+                    event.getToken()
+            );
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {}: {}", event.getEmail(), e.getMessage());
+        }
+    }
 
-        log.info("RegistrationListener caught OnRegistrationCompleteEvent: sending verification email to {}", to);
-        boolean sent = emailService.sendVerificationEmail(to, username, token);
+    @Async("emailTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleOnWelcome(OnWelcomeEvent event){
 
-        if (!sent){
-            log.warn("Failed to send verification email to {}", event.getEmail());
+        try {
+            emailService.sendWelcomeEmail(
+                    event.getEmail(),
+                    event.getUsername()
+            );
+        } catch (Exception e) {
+            log.error("Failed to send Welcome email to {}: {}", event.getEmail(), e.getMessage());
         }
     }
 }

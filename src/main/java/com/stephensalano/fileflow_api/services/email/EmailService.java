@@ -13,7 +13,7 @@ public interface EmailService {
      * @param token the verification token
      * @return true if the email was sent successfully, false otherwise
      */
-    boolean sendVerificationEmail(String to, String username, String token);
+    void sendVerificationEmail(String to, String username, String token);
 
-    boolean sendWelcomeEmail(String to, String username);
+    void sendWelcomeEmail(String to, String username);
 }
