@@ -1,5 +1,8 @@
 package com.stephensalano.fileflow_api.configs.security;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.security.Key;
 
 /**
  * JWT Authentication Filter</p>
@@ -147,6 +151,34 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 path.startsWith("/api/v1/auth/health") ||
                 path.startsWith("/h2-console") ||
                 path.startsWith("/actuator");
+    }
+
+    private boolean validateTokenSecurity(String jwt, String username){
+        try{
+            // Extract basic claims for validation (without exposing user data)
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(jwtService.getSignInKey())
+                    .build()
+                    .parseClaimsJws(jwt)
+                    .getBody();
+
+            String issuer = claims.getIssuer();
+            String environment = (String) claims.get("env");
+            String tokenType = (String) claims.get("typ");
+
+            // Log security validation (no user data)
+            log.debug("Token security validation: issuer={}, env={}, type={}", issuer, environment, tokenType);
+
+            // Additional security check - reject tokens without proper issuer
+            if (issuer == null || !issuer.startsWith("FileFlow-")){
+                log.warn("Token rejected: invalid or missing issuer");
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("Token security validation failed: {}", e.getMessage());
+            return false;
+        }
     }
 
 }

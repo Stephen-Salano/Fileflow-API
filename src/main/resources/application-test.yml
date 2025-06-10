@@ -18,14 +18,14 @@ spring:
     console:
       enabled: true
       path: /h2-console
-    # Email configurations
+
 
   # Email configurations
   mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    host: ${TEST_MAIL_HOST}
+    port: ${TEST_MAIL_PORT}
+    username: ${TEST_MAIL_USERNAME}
+    password: ${TEST_MAIL_PASSWORD}
     properties:
       mail:
         smtp:

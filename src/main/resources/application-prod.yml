@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# Production logging (minimal)
+logging:
+  level:
+    com.stephensalano.fileflow_api: INFO
+    org.springframework.security: WARN
+    root: WARN

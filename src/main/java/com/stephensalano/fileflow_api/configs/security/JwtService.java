@@ -9,10 +9,12 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +37,8 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class JwtService {
 
+    private final Environment environment;
+
     // Injecting JWT configuration from application.yaml
     @Value("${jwt.secret-key}")
     private String secretKey;
@@ -47,6 +51,13 @@ public class JwtService {
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
 
+    @Value("${spring.application.name}")
+    private String applicationName;
+
+    // constants for minimal token claims
+    private static final String ENVIRONMENT_CLAIM = "env";
+    private static final String TOKEN_TYPE_CLAIM = "typ";
+
     /**
      * Generates an access token for the authenticated user
      * Access tokens have shorter expiration times and are used for API requests
@@ -56,7 +67,9 @@ public class JwtService {
      */
     public String generateAccessToken(UserDetails userDetails){
         log.debug("Generating access token for user: {}", userDetails.getUsername());
-        return generateToken(new HashMap<>(), userDetails, accessTokenExpiration);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TOKEN_TYPE_CLAIM, "access");
+        return generateToken(claims, userDetails, accessTokenExpiration);
     }
 
     /**
@@ -68,7 +81,9 @@ public class JwtService {
      */
     public String generateRefreshToken(UserDetails userDetails){
         log.debug("Generating refresh token for user: {}", userDetails.getUsername());
-        return generateToken(new HashMap<>(), userDetails, refreshTokenExpiration);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TOKEN_TYPE_CLAIM, "refresh");
+        return generateToken(claims, userDetails, refreshTokenExpiration);
     }
 
 
@@ -82,11 +97,17 @@ public class JwtService {
      * @return JWT token String
      */
     private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
+        String currentEnvironment = getCurrentEnvironment();
+        String issuer = applicationName + "_" + currentEnvironment;
+
         return Jwts.builder()
                 // Add any extra claims (like roles, permissions, etc.)
                 .setClaims(extraClaims)
                 // Set the subject (username) of the token
                 .setSubject(userDetails.getUsername())
+                // who issued the tokens
+                .setIssuer(issuer)
+                .claim(ENVIRONMENT_CLAIM, currentEnvironment)
                 // Set when the token was issued
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 // Set en the token expires
@@ -134,13 +155,57 @@ public class JwtService {
             final String username = extractUsername(token);
             boolean isUsernameValid = username.equals(userDetails.getUsername());
             boolean isTokenNotExpired = !isTokenExpired(token);
+            boolean isIssuerValid = isIssuerValid(token);
+            boolean isEnvironmentValid = isEnvironmentValid(token);
 
-            log.debug("Token validation for user {}: username_valid={}, not_expired={}", username, isUsernameValid, isTokenNotExpired);
-            return isUsernameValid && isTokenNotExpired;
+            log.debug("Token validation for user {}: username_valid={}, not_expired={}, issuer_valid={}, env_valid={}",
+                    username, isUsernameValid, isTokenNotExpired, isIssuerValid, isEnvironmentValid);
+            return isUsernameValid && isTokenNotExpired && isIssuerValid && isEnvironmentValid;
         } catch (Exception e){
             log.warn("Token validation failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    private boolean isIssuerValid(String token) {
+        try{
+            String tokenIssuer = extractClaim(token, Claims::getIssuer);
+            String currentEnvironment = getCurrentEnvironment();
+            String expectedIssuer = applicationName + "_" + currentEnvironment;
+
+            boolean valid = expectedIssuer.equals(tokenIssuer);
+            log.debug("Issuer validation: expected={}, actual={}, valid={}", expectedIssuer, tokenIssuer, valid);
+            return valid;
+        } catch (Exception e){
+            log.warn("Error validating issuer: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isEnvironmentValid(String token) {
+        try{
+            String tokenEnvironment = extractClaim(token, claims -> claims.get(ENVIRONMENT_CLAIM, String.class));
+            String currentEnvironment = getCurrentEnvironment();
+
+            boolean valid = currentEnvironment.equals(tokenEnvironment);
+            log.debug("Environment validation: expected={}, actual={}, valid={}", currentEnvironment, tokenEnvironment, valid);
+            return valid;
+        }catch (Exception e){
+            log.warn("Error validating environment: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private String getCurrentEnvironment() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        if (activeProfiles.length > 0){
+            return Arrays.stream(activeProfiles)
+                    .filter(profile -> profile.equals("dev") || profile.equals("prod") || profile.equals("test"))
+                    .findFirst()
+                    .orElse("default");
+        }
+        return "default";
+
     }
 
     /**
@@ -197,7 +262,7 @@ public class JwtService {
      *
      * @return key object for signing/verifying tokens
      */
-    private Key getSignInKey() {
+    public Key getSignInKey() {
         // Decode the base64-encoded secret key
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         // Create HMAC key for HS256 algorithm
