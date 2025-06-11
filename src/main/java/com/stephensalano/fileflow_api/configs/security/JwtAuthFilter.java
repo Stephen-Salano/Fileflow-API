@@ -1,8 +1,5 @@
 package com.stephensalano.fileflow_api.configs.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,23 +16,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.security.Key;
 
 /**
- * JWT Authentication Filter</p>
+ * JWT Authentication Filter
  *
  * This filter intercepts every HTTP request to check for JWT tokens in the Authorization header
  * It's responsible for:
  * - Extracting JWT tokens from requests
- * - Validating tokens using JwtService
+ * - Validating encrypted tokens using JwtService
  * - Setting up Spring Security authentication context for valid tokens
  * - Allowing requests to proceed with proper authentication state
  *
  * Extends `OncePerRequestFilter` to ensure it runs exactly once per request,
  * even if the request is forwarded or redirected.
- *
  */
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -142,6 +136,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 authHeader.length() > BEARER_PREFIX_LENGTH;
     }
 
+    /**
+     * Skip JWT processing for public endpoints
+     *
+     * @param request HTTP request
+     * @return true if filter should be skipped, false otherwise
+     */
     protected boolean shouldNotFilter(HttpServletRequest request){
         String path = request.getRequestURI();
 
@@ -153,32 +153,5 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 path.startsWith("/actuator");
     }
 
-    private boolean validateTokenSecurity(String jwt, String username){
-        try{
-            // Extract basic claims for validation (without exposing user data)
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(jwtService.getSignInKey())
-                    .build()
-                    .parseClaimsJws(jwt)
-                    .getBody();
-
-            String issuer = claims.getIssuer();
-            String environment = (String) claims.get("env");
-            String tokenType = (String) claims.get("typ");
-
-            // Log security validation (no user data)
-            log.debug("Token security validation: issuer={}, env={}, type={}", issuer, environment, tokenType);
-
-            // Additional security check - reject tokens without proper issuer
-            if (issuer == null || !issuer.startsWith("FileFlow-")){
-                log.warn("Token rejected: invalid or missing issuer");
-                return false;
-            }
-            return true;
-        } catch (Exception e) {
-            log.warn("Token security validation failed: {}", e.getMessage());
-            return false;
-        }
-    }
 
 }

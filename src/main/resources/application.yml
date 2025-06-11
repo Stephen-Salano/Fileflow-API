@@ -21,6 +21,7 @@ spring:
 # JWT Configuration with environment variables
 jwt:
   secret-key:  ${JWT_SECRET_KEY}
+  encryption-key: ${JWT_ENCRYPTION_KEY} # <--- New: Our encryption key
   access-token-expiration: ${JWT_ACCESS_EXPR}
   refresh-token-expiration: ${JWT_REFRESH_EXPR}
   security:
