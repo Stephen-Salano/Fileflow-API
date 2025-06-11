@@ -12,6 +12,7 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -173,6 +174,20 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> login(
             @Valid @RequestBody AuthRequest authRequest
             ){
+        Authentication currentAuthentication = SecurityContextHolder.getContext().getAuthentication();
+
+        //Check if a user is already authenticated and not an anonymous user
+        // "anonymousUser" is the default principal for unauthenticated users in Springboot Security
+        if(currentAuthentication != null && currentAuthentication.isAuthenticated() &&
+                !"anonymousUser".equals(currentAuthentication.getPrincipal())){
+            log.warn("Login attempt by already authenticated user: {}", currentAuthentication.getName());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "You are already logged in."
+                    ));
+        }
+
         log.info("Login attempt for: {}", authRequest.usernameOrEmail());
 
         try{

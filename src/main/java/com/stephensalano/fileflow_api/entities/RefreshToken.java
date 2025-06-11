@@ -26,7 +26,7 @@ public class RefreshToken{
     @ManyToOne(optional = false)
     private Account account;
 
-    @Column(name = "token", nullable = false)
+    @Column(name = "token", nullable = false, length = 1024) // length becuase we use JWE tokens that are longer
     private String token;
 
     @Column(name = "expiry_date")

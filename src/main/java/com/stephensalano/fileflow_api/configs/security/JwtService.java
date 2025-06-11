@@ -15,24 +15,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-/**
- * Service for handling JWT operations
- *
- * This service provides core functionality for:
- * - Generating access and refresh tokens
- * - Validating tokens and checking expiration
- * - Extracting user info from tokens
- * - Managing token lifecycle
- *
- * Uses JJWT library for token operations and Spring's configuration properties
- * for secure settings like secret keys and expiration times
- */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -40,11 +29,6 @@ public class JwtService {
 
     private final Environment environment;
 
-    // Injecting JWT configuration from application.yaml
-    @Value("${jwt.secret-key}") // Used for JWS signing (integrity)
-    private String secretKey;
-
-    // Injecting JWE encryption key
     @Value("${jwt.encryption-key}")
     private String encryptionKey;
 
@@ -59,22 +43,11 @@ public class JwtService {
     @Value("${spring.application.name}")
     private String applicationName;
 
-    // Using A256GCM for content encryption (AES 256-bit GCM)
-    // Using A256KW for key management (AES 256-bit Key Wrap)
     private static final AeadAlgorithm ENCRYPTION_ALGORITHM = Jwts.ENC.A256GCM;
     private static final SecretKeyAlgorithm KEY_MANAGEMENT_ALGORITHM = Jwts.KEY.A256KW;
-
-    // constants for minimal token claims
     private static final String ENVIRONMENT_CLAIM = "env";
     private static final String TOKEN_TYPE_CLAIM = "typ";
 
-    /**
-     * Generates an access token for the authenticated user
-     * Access tokens have shorter expiration times and are used for API requests
-     *
-     * @param userDetails the authenticated user's details
-     * @return JWT access token string
-     */
     public String generateAccessToken(UserDetails userDetails) {
         log.debug("Generating access token for user: {}", userDetails.getUsername());
         Map<String, Object> claims = new HashMap<>();
@@ -82,13 +55,6 @@ public class JwtService {
         return generateToken(claims, userDetails, accessTokenExpiration);
     }
 
-    /**
-     * Generates a refresh token for the authenticated user
-     * Refresh tokens have longer expiration times and are used to get new access tokens
-     *
-     * @param userDetails The authenticated user's details
-     * @return JWT refresh token String
-     */
     public String generateRefreshToken(UserDetails userDetails) {
         log.debug("Generating refresh token for user: {}", userDetails.getUsername());
         Map<String, Object> claims = new HashMap<>();
@@ -96,16 +62,6 @@ public class JwtService {
         return generateToken(claims, userDetails, refreshTokenExpiration);
     }
 
-    /**
-     * Generates a JWT token with custom claims and expiration
-     * This is the core token generation method used by both access and refresh tokens
-     * Uses JWE encryption to prevent token debugging
-     *
-     * @param extraClaims additional claims to include in the token
-     * @param userDetails user details for the token subject
-     * @param expiration token expiration time in milliseconds
-     * @return JWT token String
-     */
     private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
         String currentEnvironment = getCurrentEnvironment();
         String issuer = applicationName + "_" + currentEnvironment;
@@ -115,127 +71,99 @@ public class JwtService {
         Date expiryDate = new Date(nowMillis + expiration);
 
         return Jwts.builder()
-                // Add custom claims
                 .claims(extraClaims)
-                // Set standard claims
                 .subject(userDetails.getUsername())
-                // set the issuer of tokens
                 .issuer(issuer)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                // Add environment claim
                 .claim(ENVIRONMENT_CLAIM, currentEnvironment)
-                // Encrypt the token (JWE) - prevents debugging
                 .encryptWith(getEncryptionKey(), KEY_MANAGEMENT_ALGORITHM, ENCRYPTION_ALGORITHM)
                 .compact();
     }
 
-    /**
-     * Extracts the username (subject) from a JWT token
-     *
-     * @param token JWT token string
-     * @return Username extracted from token
-     */
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    /**
-     * Generic method to extract any claim from a JWT token
-     * Uses a function to specify which claim to extract
-     *
-     * @param token JWT token string
-     * @param claimsResolver Function that specifies which claim to extract
-     * @return The extracted claim value
-     * @param <T> Type of claim being extracted
-     */
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    /**
-     * Validates a JWT token against user details
-     * First decrypts the token, then checks if it belongs to the user and hasn't expired
-     *
-     * @param token JWT token string
-     * @param userDetails User details to validate against
-     * @return true if token is valid, false otherwise
-     */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
-            // First attempt to decrypt and extract claims - if this fails, token is invalid
             final String username = extractUsername(token);
             if (username == null) {
-                log.warn("Failed to extract username from token - decryption may have failed");
+                log.warn("Failed to extract username from token");
                 return false;
             }
 
+            // Consolidated validation - all checks in one place
             boolean isUsernameValid = username.equals(userDetails.getUsername());
             boolean isTokenNotExpired = !isTokenExpired(token);
-            boolean isIssuerValid = isIssuerValid(token);
-            boolean isEnvironmentValid = isEnvironmentValid(token);
+            boolean isSecurityValid = validateTokenSecurity(token);
 
-            log.debug("Token validation for user {}: username_valid={}, not_expired={}, issuer_valid={}, env_valid={}",
-                    username, isUsernameValid, isTokenNotExpired, isIssuerValid, isEnvironmentValid);
-            return isUsernameValid && isTokenNotExpired && isIssuerValid && isEnvironmentValid;
+            log.debug("Token validation for user {}: username_valid={}, not_expired={}, security_valid={}",
+                    username, isUsernameValid, isTokenNotExpired, isSecurityValid);
+
+            return isUsernameValid && isTokenNotExpired && isSecurityValid;
         } catch (Exception e) {
-            log.warn("Token validation failed (likely decryption error): {}", e.getMessage());
+            log.warn("Token validation failed: {}", e.getMessage());
             return false;
         }
-    }
-
-    private boolean isIssuerValid(String token) {
-        try {
-            String tokenIssuer = extractClaim(token, Claims::getIssuer);
-            String currentEnvironment = getCurrentEnvironment();
-            String expectedIssuer = applicationName + "_" + currentEnvironment;
-
-            boolean valid = expectedIssuer.equals(tokenIssuer);
-            log.debug("Issuer validation: expected={}, actual={}, valid={}", expectedIssuer, tokenIssuer, valid);
-            return valid;
-        } catch (Exception e) {
-            log.warn("Error validating issuer: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    private boolean isEnvironmentValid(String token) {
-        try {
-            String tokenEnvironment = extractClaim(token, claims -> claims.get(ENVIRONMENT_CLAIM, String.class));
-            String currentEnvironment = getCurrentEnvironment();
-
-            boolean valid = currentEnvironment.equals(tokenEnvironment);
-            log.debug("Environment validation: expected={}, actual={}, valid={}", currentEnvironment, tokenEnvironment, valid);
-            return valid;
-        } catch (Exception e) {
-            log.warn("Error validating environment: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    private String getCurrentEnvironment() {
-        String[] activeProfiles = environment.getActiveProfiles();
-        if (activeProfiles.length > 0) {
-            return Arrays.stream(activeProfiles)
-                    .filter(profile -> profile.equals("dev") || profile.equals("prod") || profile.equals("test"))
-                    .findFirst()
-                    .orElse("default");
-        }
-        return "default";
     }
 
     /**
-     * Checks if a JWT token has expired
-     *
-     * @param token JWT token string
-     * @return true if token is expired, false otherwise
+     * Consolidated security validation method
+     * Checks issuer, environment, and token structure
      */
+    private boolean validateTokenSecurity(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+
+            return validateIssuer(claims) &&
+                    validateEnvironment(claims) &&
+                    validateTokenStructure(claims);
+        } catch (Exception e) {
+            log.warn("Security validation failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean validateIssuer(Claims claims) {
+        String tokenIssuer = claims.getIssuer();
+        String expectedIssuer = applicationName + "_" + getCurrentEnvironment();
+
+        boolean valid = expectedIssuer.equals(tokenIssuer);
+        if (!valid) {
+            log.warn("Invalid issuer: expected={}, actual={}", expectedIssuer, tokenIssuer);
+        }
+        return valid;
+    }
+
+    private boolean validateEnvironment(Claims claims) {
+        String tokenEnvironment = claims.get(ENVIRONMENT_CLAIM, String.class);
+        String currentEnvironment = getCurrentEnvironment();
+
+        boolean valid = currentEnvironment.equals(tokenEnvironment);
+        if (!valid) {
+            log.warn("Environment mismatch: expected={}, actual={}", currentEnvironment, tokenEnvironment);
+        }
+        return valid;
+    }
+
+    private boolean validateTokenStructure(Claims claims) {
+        return claims.getSubject() != null &&
+                claims.getIssuer() != null &&
+                claims.get(ENVIRONMENT_CLAIM) != null &&
+                claims.get(TOKEN_TYPE_CLAIM) != null;
+    }
+
     private boolean isTokenExpired(String token) {
         try {
             Date expiration = extractExpiration(token);
             boolean expired = expiration.before(new Date());
-            log.debug("token expiration check: expires_at={}, is_expired={}", expiration, expired);
+            log.debug("Token expiration check: expires_at={}, is_expired={}", expiration, expired);
             return expired;
         } catch (Exception e) {
             log.warn("Error checking token expiration: {}", e.getMessage());
@@ -243,25 +171,10 @@ public class JwtService {
         }
     }
 
-    /**
-     * Extracts the expiration date from a JWT token
-     *
-     * @param token JWT token string
-     * @return Expiration date of the token
-     */
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    /**
-     * Extracts all claims from a JWT token
-     * This method decrypts JWE tokens and extracts claims
-     * If decryption fails, this will throw an exception
-     *
-     * @param token JWT token String
-     * @return claims object containing all token claims
-     * @throws RuntimeException if token cannot be decrypted or parsed
-     */
     private Claims extractAllClaims(String token) {
         try {
             return Jwts.parser()
@@ -275,25 +188,32 @@ public class JwtService {
         }
     }
 
-    /**
-     * Creates the signing key from the secret key string
-     * Uses HMAC-SHA256 algorithm for token signing
-     *
-     * @return SecretKey object for signing/verifying tokens
-     */
-    private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+    private String getCurrentEnvironment() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        return Arrays.stream(activeProfiles)
+                .filter(profile -> profile.matches("dev|prod|test"))
+                .findFirst()
+                .orElse("default");
+    }
+
+    private SecretKey getEncryptionKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(encryptionKey);
+        return new SecretKeySpec(keyBytes, "AES");
     }
 
     /**
-     * Creates the encryption key for JWE operations
-     * Uses the configured encryption key for token encryption/decryption
-     *
-     * @return SecretKey object for encryption/decryption
+     * Safe method to extract token metadata for logging
      */
-    private SecretKey getEncryptionKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(encryptionKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+    public String getTokenMetadata(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            return String.format("issuer=%s, env=%s, type=%s, exp=%s",
+                    claims.getIssuer(),
+                    claims.get(ENVIRONMENT_CLAIM),
+                    claims.get(TOKEN_TYPE_CLAIM),
+                    claims.getExpiration());
+        } catch (Exception e) {
+            return "invalid_token";
+        }
     }
 }

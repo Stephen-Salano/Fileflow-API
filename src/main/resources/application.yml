@@ -28,6 +28,8 @@ jwt:
     include-minimal-claims: true
     validate-issuer: true
     validate-environment: true
+    # added Key validation
+    min-key-length: 32 # Minimum 256 bits
 
 
 # Verification Token properties
