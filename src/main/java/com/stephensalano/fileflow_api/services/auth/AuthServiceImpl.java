@@ -228,29 +228,7 @@ public class AuthServiceImpl  implements AuthService{
               -------------------------------------------------------------------------------------------------------
              */
 
-            // fingerprint async registration
-            String fingerprintHash = authRequest.fingerprintHash();
-            if (fingerprintHash !=null && !fingerprintHash.isBlank()){
-                String userAgent = request.getHeader("User-Agent");
-                String ipAddress = SecurityUtils.extractClientIp(request);
-
-                SecurityContext securityContext = new SecurityContext(
-                        fingerprintHash, userAgent, ipAddress
-                );
-
-                DeviceFingerprintRequest fingerprintRequest = new DeviceFingerprintRequest(
-                        securityContext.fingerprintHash(),
-                        securityContext.userAgent(),
-                        securityContext.ipAddress()
-                );
-
-                deviceFingerprintService
-                        .registerFingerprint(account, fingerprintRequest)
-                        .exceptionally(ex -> {
-                            log.warn("Assync device registration failed for user {}: {}", account.getUsername(), ex.getMessage());
-                            return  null;
-                        });
-            }
+            handleDeviceFingerprintRegistration(authRequest, account);
 
             log.info("Login successful for user: {}", account.getUsername());
 
@@ -339,5 +317,32 @@ public class AuthServiceImpl  implements AuthService{
         newRefreshToken.setCreatedAt(LocalDateTime.now());
 
         refreshTokenRepository.save(newRefreshToken);
+    }
+
+    /**
+     * Handles the asynchronous registration of device fingerprints during login.
+     *
+     * @param authRequest The authentication request containing the fingerprint hash.
+     * @param account The authenticated account.
+     */
+    private void handleDeviceFingerprintRegistration(AuthRequest authRequest, Account account) {
+        String fingerprintHash = authRequest.fingerprintHash();
+        if (fingerprintHash != null && !fingerprintHash.isBlank()) {
+            String userAgent = request.getHeader("User-Agent");
+            String ipAddress = SecurityUtils.extractClientIp(request);
+
+            SecurityContext securityContext = new SecurityContext(
+                    fingerprintHash, userAgent, ipAddress
+            );
+
+            DeviceFingerprintRequest fingerprintRequest = new DeviceFingerprintRequest(
+                    securityContext.fingerprintHash(),
+                    securityContext.userAgent(),
+                    securityContext.ipAddress()
+            );
+
+            deviceFingerprintService.registerFingerprint(account, fingerprintRequest)
+                    .exceptionally(ex -> { log.warn("Async device registration failed for user {}: {}", account.getUsername(), ex.getMessage()); return null; });
+        }
     }
 }

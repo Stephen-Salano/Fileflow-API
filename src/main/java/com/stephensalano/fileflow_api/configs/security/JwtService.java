@@ -1,11 +1,10 @@
 package com.stephensalano.fileflow_api.configs.security;
 
+import com.stephensalano.fileflow_api.dto.security.SecurityContext;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.AeadAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SecretKeyAlgorithm;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,11 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 @Service
@@ -29,8 +24,11 @@ public class JwtService {
 
     private final Environment environment;
 
-    @Value("${jwt.encryption-key}")
-    private String encryptionKey;
+//    @Value("${jwt.encryption-key}")
+//    private String encryptionKey;
+
+    @Value("${jwt.signing-key}")
+    private String signingKey;
 
     @Getter
     @Value("${jwt.access-token-expiration}")
@@ -43,162 +41,164 @@ public class JwtService {
     @Value("${spring.application.name}")
     private String applicationName;
 
-    private static final AeadAlgorithm ENCRYPTION_ALGORITHM = Jwts.ENC.A256GCM;
-    private static final SecretKeyAlgorithm KEY_MANAGEMENT_ALGORITHM = Jwts.KEY.A256KW;
+    @Value("${spring.application.frontend-url}")
+    private String audience;
+
+
+//    private static final AeadAlgorithm ENCRYPTION_ALGORITHM = Jwts.ENC.A256GCM;
+//    private static final SecretKeyAlgorithm KEY_MANAGEMENT_ALGORITHM = Jwts.KEY.A256KW;
     private static final String ENVIRONMENT_CLAIM = "env";
     private static final String TOKEN_TYPE_CLAIM = "typ";
+    private static final String IP_CLAIM = "ip";
+    private static final String FP_CLAIM = "fp"; // fingerprint claim
 
+    /**
+     * Generates an access token for the given user details with additional security context (IP, fingerprint)
+     * @param userDetails the user details
+     * @return the generated token
+     */
     public String generateAccessToken(UserDetails userDetails) {
+
         log.debug("Generating access token for user: {}", userDetails.getUsername());
-        Map<String, Object> claims = new HashMap<>();
-        claims.put(TOKEN_TYPE_CLAIM, "access");
-        return generateToken(claims, userDetails, accessTokenExpiration);
+        return generateToken(userDetails, null, "access", accessTokenExpiration);
+
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
         log.debug("Generating refresh token for user: {}", userDetails.getUsername());
-        Map<String, Object> claims = new HashMap<>();
-        claims.put(TOKEN_TYPE_CLAIM, "refresh");
-        return generateToken(claims, userDetails, refreshTokenExpiration);
+        return generateToken(userDetails, null, "refresh", refreshTokenExpiration * 1000);
     }
 
-    private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
-        String currentEnvironment = getCurrentEnvironment();
-        String issuer = applicationName + "_" + currentEnvironment;
+    private String generateToken(UserDetails userDetails, SecurityContext context, String type, long expiration) {
+        Date now = new Date();
+        Date exp = new Date(now.getTime() + expiration);
 
-        long nowMillis = System.currentTimeMillis();
-        Date now = new Date(nowMillis);
-        Date expiryDate = new Date(nowMillis + expiration);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TOKEN_TYPE_CLAIM, type);
+        claims.put(ENVIRONMENT_CLAIM, getCurrentEnvironment());
+        claims.put("aud", Collections.singleton(audience));
 
-        return Jwts.builder()
-                .claims(extraClaims)
+        if (context != null){
+            claims.put(IP_CLAIM, context.ipAddress());
+            claims.put(FP_CLAIM, context.fingerprintHash());
+        }
+
+        String issuer = applicationName + '_' + getCurrentEnvironment();
+
+        String token = Jwts.builder()
+                .claims(claims)
                 .subject(userDetails.getUsername())
                 .issuer(issuer)
                 .issuedAt(now)
-                .expiration(expiryDate)
-                .claim(ENVIRONMENT_CLAIM, currentEnvironment)
-                .encryptWith(getEncryptionKey(), KEY_MANAGEMENT_ALGORITHM, ENCRYPTION_ALGORITHM)
+                .expiration(exp)
+                .signWith(getSigningKey())
                 .compact();
-    }
 
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-
-    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+        log.info("Generated token: user={}, type={}, expires={}c, aud={}",
+                userDetails.getUsername(), type, exp, audience);
+        return token;
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        try {
-            final String username = extractUsername(token);
-            if (username == null) {
-                log.warn("Failed to extract username from token");
-                return false;
-            }
-
-            // Consolidated validation - all checks in one place
-            boolean isUsernameValid = username.equals(userDetails.getUsername());
-            boolean isTokenNotExpired = !isTokenExpired(token);
-            boolean isSecurityValid = validateTokenSecurity(token);
-
-            log.debug("Token validation for user {}: username_valid={}, not_expired={}, security_valid={}",
-                    username, isUsernameValid, isTokenNotExpired, isSecurityValid);
-
-            return isUsernameValid && isTokenNotExpired && isSecurityValid;
-        } catch (Exception e) {
+        try{
+            String username = extractUsername(token);
+            boolean valid = username.equals(userDetails.getUsername())
+                    && !isTokenExpired(token)
+                    && validateIssuer(token)
+                    && validateAudience(token);
+            log.debug("Token Validity for {}:{}", username, valid);
+            return valid;
+        } catch (Exception e){
             log.warn("Token validation failed: {}", e.getMessage());
             return false;
         }
+
     }
 
-    /**
-     * Consolidated security validation method
-     * Checks issuer, environment, and token structure
-     */
-    private boolean validateTokenSecurity(String token) {
-        try {
-            Claims claims = extractAllClaims(token);
+    public String extractUsername(String token){
+        return extractClaim(token, Claims::getSubject);
+    }
 
-            return validateIssuer(claims) &&
-                    validateEnvironment(claims) &&
-                    validateTokenStructure(claims);
-        } catch (Exception e) {
-            log.warn("Security validation failed: {}", e.getMessage());
+    public String extractIp(String token){
+        return extractClaim(token, claims -> claims.get(IP_CLAIM, String.class));
+    }
+    public String extractFingerprintHash(String token){
+        return extractClaim(token, claims -> claims.get(FP_CLAIM, String.class));
+    }
+
+
+    private boolean validateIssuer(String token) {
+        try {
+            String expected = applicationName + "_" + getCurrentEnvironment();
+            String actual = extractClaim(token, Claims::getIssuer);
+            boolean valid = expected.equals(actual);
+            if (!valid) log.warn("Issuer mismatch: expected={}, actual={}", expected, actual);
+            return valid;
+        }catch (Exception e){
+            log.warn("Issuer validation failed: {}", e.getMessage());
             return false;
         }
     }
 
-    private boolean validateIssuer(Claims claims) {
-        String tokenIssuer = claims.getIssuer();
-        String expectedIssuer = applicationName + "_" + getCurrentEnvironment();
-
-        boolean valid = expectedIssuer.equals(tokenIssuer);
-        if (!valid) {
-            log.warn("Invalid issuer: expected={}, actual={}", expectedIssuer, tokenIssuer);
-        }
-        return valid;
-    }
-
-    private boolean validateEnvironment(Claims claims) {
-        String tokenEnvironment = claims.get(ENVIRONMENT_CLAIM, String.class);
-        String currentEnvironment = getCurrentEnvironment();
-
-        boolean valid = currentEnvironment.equals(tokenEnvironment);
-        if (!valid) {
-            log.warn("Environment mismatch: expected={}, actual={}", currentEnvironment, tokenEnvironment);
-        }
-        return valid;
-    }
-
-    private boolean validateTokenStructure(Claims claims) {
-        return claims.getSubject() != null &&
-                claims.getIssuer() != null &&
-                claims.get(ENVIRONMENT_CLAIM) != null &&
-                claims.get(TOKEN_TYPE_CLAIM) != null;
+    private boolean validateAudience(String token){
+       try{
+           Set<String> audienceSet = extractClaim(token, Claims::getAudience);
+           boolean valid = audienceSet != null && audienceSet.contains(audience);
+           if (!valid) log.warn("Audience mismatch: expected contains={}, actual={}", audience, audienceSet);
+           return valid;
+       } catch (Exception e){
+           log.warn("Audience validation failed: {}", e.getMessage());
+           return false;
+       }
     }
 
     private boolean isTokenExpired(String token) {
-        try {
-            Date expiration = extractExpiration(token);
-            boolean expired = expiration.before(new Date());
-            log.debug("Token expiration check: expires_at={}, is_expired={}", expiration, expired);
+        try{
+            Date exp = extractClaim(token, Claims::getExpiration);
+            boolean expired = exp.before(new Date());
+            if (expired) log.debug("Token expired at {}", exp);
             return expired;
-        } catch (Exception e) {
-            log.warn("Error checking token expiration: {}", e.getMessage());
+        } catch (Exception e){
+            log.warn("Token expiration check failed: {}", e.getMessage());
             return true;
         }
     }
 
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
     }
 
     private Claims extractAllClaims(String token) {
+
         try {
             return Jwts.parser()
-                    .decryptWith(getEncryptionKey())
+                    .verifyWith(getSigningKey())
                     .build()
-                    .parseEncryptedClaims(token)
+                    .parseSignedClaims(token)
                     .getPayload();
-        } catch (Exception e) {
-            log.error("Failed to decrypt/parse token: {}", e.getMessage());
-            throw new RuntimeException("Invalid or corrupted token", e);
+        } catch (Exception e){
+            log.error("Token parsing failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to parse JWT token", e);
+        }
+    }
+
+    private SecretKey getSigningKey(){
+        try{
+            byte[] keyBytes = Decoders.BASE64.decode(signingKey);
+            return Keys.hmacShaKeyFor(keyBytes);
+        } catch (Exception e){
+            log.error("Signing key error: {}", e.getMessage(), e);
+            throw new RuntimeException("Invalid Signing Key", e);
         }
     }
 
     private String getCurrentEnvironment() {
-        String[] activeProfiles = environment.getActiveProfiles();
-        return Arrays.stream(activeProfiles)
-                .filter(profile -> profile.matches("dev|prod|test"))
+
+        return Arrays.stream(environment.getActiveProfiles())
+                .filter(p -> List.of("dev", "test", "prod").contains(p))
                 .findFirst()
                 .orElse("default");
-    }
-
-    private SecretKey getEncryptionKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(encryptionKey);
-        return new SecretKeySpec(keyBytes, "AES");
     }
 
     /**
