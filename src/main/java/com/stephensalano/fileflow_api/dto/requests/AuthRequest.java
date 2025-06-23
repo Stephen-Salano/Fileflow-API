@@ -21,6 +21,7 @@ public record AuthRequest(
         String usernameOrEmail,
 
         @NotBlank(message = "Password cannot be blank")
-        String password
+        String password,
+        String fingerprintHash
 ) {
 }

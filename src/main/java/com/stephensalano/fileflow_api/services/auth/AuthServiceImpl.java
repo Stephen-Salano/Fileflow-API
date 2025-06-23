@@ -2,16 +2,20 @@ package com.stephensalano.fileflow_api.services.auth;
 
 import com.stephensalano.fileflow_api.configs.security.JwtService;
 import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
+import com.stephensalano.fileflow_api.dto.requests.DeviceFingerprintRequest;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
 import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
+import com.stephensalano.fileflow_api.dto.security.SecurityContext;
 import com.stephensalano.fileflow_api.entities.*;
 import com.stephensalano.fileflow_api.events.OnRegistrationCompleteEvent;
 import com.stephensalano.fileflow_api.events.OnWelcomeEvent;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
 import com.stephensalano.fileflow_api.repository.RefreshTokenRepository;
 import com.stephensalano.fileflow_api.repository.UserRepository;
-import com.stephensalano.fileflow_api.services.email.EmailService;
+import com.stephensalano.fileflow_api.services.security.DeviceFingerprintService;
 import com.stephensalano.fileflow_api.services.verification_token.VerificationTokenService;
+import com.stephensalano.fileflow_api.utils.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,7 +41,8 @@ public class AuthServiceImpl  implements AuthService{
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final VerificationTokenService verificationTokenService;
-    private final EmailService emailService;
+    private final DeviceFingerprintService deviceFingerprintService;
+    private final HttpServletRequest request;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -207,8 +212,45 @@ public class AuthServiceImpl  implements AuthService{
             String refreshToken = jwtService.generateRefreshToken(account);
 
             // Save the refresh token to the database
-
             saveRefreshToken(account, refreshToken);
+
+            /*
+              TODO: Add optional security check (future):
+              --------------------------------------------------------------------------------------------------------
+              In the future, we want to add an alert to the user when a login occurs from an unknown device:
+
+              if(!deviceFingerprintService.isKnownDevice(account, fingerprintHash)){
+                   // 1. Send the alert email: "New device logged in to your account from IP"
+                   // 2. Optionally log an event / store audit entry
+              }
+
+              This check is skipped for now since registerFingerPrint() already handles new vs existing devices well
+              -------------------------------------------------------------------------------------------------------
+             */
+
+            // fingerprint async registration
+            String fingerprintHash = authRequest.fingerprintHash();
+            if (fingerprintHash !=null && !fingerprintHash.isBlank()){
+                String userAgent = request.getHeader("User-Agent");
+                String ipAddress = SecurityUtils.extractClientIp(request);
+
+                SecurityContext securityContext = new SecurityContext(
+                        fingerprintHash, userAgent, ipAddress
+                );
+
+                DeviceFingerprintRequest fingerprintRequest = new DeviceFingerprintRequest(
+                        securityContext.fingerprintHash(),
+                        securityContext.userAgent(),
+                        securityContext.ipAddress()
+                );
+
+                deviceFingerprintService
+                        .registerFingerprint(account, fingerprintRequest)
+                        .exceptionally(ex -> {
+                            log.warn("Assync device registration failed for user {}: {}", account.getUsername(), ex.getMessage());
+                            return  null;
+                        });
+            }
 
             log.info("Login successful for user: {}", account.getUsername());
 
