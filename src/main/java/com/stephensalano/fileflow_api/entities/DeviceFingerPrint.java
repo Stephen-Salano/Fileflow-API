@@ -55,6 +55,15 @@ public class DeviceFingerPrint {
     @Column(name = "trusted", nullable = false)
     private boolean trusted = true; // we default to trusted on first login
 
+    @Column(name = "device_type", length = 50)
+    private String deviceType; //eg. mobile or desktop
+
+    @Column(name = "browser", length = 100)
+    private String browser;
+
+    @Column(name = "os", length = 100)
+    private String operatingSystem;
+
 
     @PrePersist
     protected void onCreate(){

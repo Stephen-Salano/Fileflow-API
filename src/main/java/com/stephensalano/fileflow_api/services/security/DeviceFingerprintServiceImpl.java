@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ua_parser.Parser;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 public class DeviceFingerprintServiceImpl implements DeviceFingerprintService{
 
     private final DeviceFingerPrintRepository repository;
+    private final Parser parser = new Parser(); // the ua parser instance
 
     /**
      * Asynchronously update or register a fingerprint
@@ -40,9 +42,20 @@ public class DeviceFingerprintServiceImpl implements DeviceFingerprintService{
         try{
             log.debug("Async registration: account={}, hash={}", account.getId(), request.fingerprintHash());
 
-            Optional<DeviceFingerPrint> existing = repository.findByAccountAndFingerPrintHash(account, request.fingerprintHash());
+            // Parse the User-Agent once
+            var client = parser.parse(request.userAgent());
+            String deviceType = client.device.family; // eg iphone or desktop
+            String browser = client.userAgent.family; // eg chrome or iphone
+            String operatingSystem = client.os.family; // eg ios or android
+
+            Optional<DeviceFingerPrint> existing = repository
+                    .findByAccountAndFingerPrintHash(account, request.fingerprintHash());
 
             DeviceFingerPrint fingerPrint = existing.map(fp -> {
+                fp.setUserAgent(request.userAgent());
+                fp.setDeviceType(deviceType);
+                fp.setBrowser(browser);
+                fp.setOperatingSystem(operatingSystem);
                 log.debug("Device already known. Updating lastUsedAt. ID={}", fp.getId());
                 return repository.save(fp); // lastUsedAt is handled by the preupdate
             }).orElseGet(() -> {
@@ -52,6 +65,10 @@ public class DeviceFingerprintServiceImpl implements DeviceFingerprintService{
                         .fingerPrintHash(request.fingerprintHash())
                         .userAgent(request.userAgent())
                         .ipAddress(request.ipAddress())
+                        .deviceType(deviceType)
+                        .browser(browser)
+                        .operatingSystem(operatingSystem)
+                        .trusted(true)
                         .build();
                 log.debug("New device. Saving fingerprint for account={}", account.getId());
                 return repository.save(newFingerPrint);

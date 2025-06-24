@@ -1,7 +1,7 @@
 package com.stephensalano.fileflow_api.controllers;
 
+import com.stephensalano.fileflow_api.dto.responses.DeviceFingerprintResponse;
 import com.stephensalano.fileflow_api.entities.Account;
-import com.stephensalano.fileflow_api.entities.DeviceFingerPrint;
 import com.stephensalano.fileflow_api.services.security.DeviceFingerprintService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,7 +24,18 @@ public class DeviceController {
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> listDevices(@AuthenticationPrincipal Account account) {
-        List<DeviceFingerPrint> devices = deviceFingerprintService.listDevices(account);
+        var devices = deviceFingerprintService
+                .listDevices(account)
+                .stream()
+                .map(fp -> new DeviceFingerprintResponse(
+                        fp.getDeviceType(),
+                        fp.getBrowser(),
+                        fp.getOperatingSystem(),
+                        fp.getCreatedAt(),
+                        fp.getLastUsedAt(),
+                        fp.isTrusted()
+                )).toList();
+
         return ResponseEntity.status(HttpStatus.OK)
                 .body(Map.of(
                         "success", true,
@@ -57,7 +67,7 @@ public class DeviceController {
     @DeleteMapping("/{hash}")
     public ResponseEntity<Map<String, Object>> removeDevice(@PathVariable String fingerprintHash, @AuthenticationPrincipal Account account) {
         deviceFingerprintService.removeDevice(account, fingerprintHash);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
+        return ResponseEntity.status(HttpStatus.OK)
                 .body(Map.of(
                         "success", true,
                         "message", "Device removed successfully"
