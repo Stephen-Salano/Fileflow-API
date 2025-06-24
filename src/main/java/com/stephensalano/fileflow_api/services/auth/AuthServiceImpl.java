@@ -235,7 +235,7 @@ public class AuthServiceImpl  implements AuthService{
             log.info("Login successful for user: {}", account.getUsername());
 
             return AuthResponse.of(
-                    accessToken, refreshToken, jwtService.getAccessTokenExpiration() / 100, // Converted to seconds
+                    accessToken, refreshToken, jwtService.getAccessTokenExpiration() / 1000, // Converted to seconds
                     account.getUsername(), account.getEmail(), account.getRole().name()
             );
 

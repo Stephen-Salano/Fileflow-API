@@ -9,91 +9,60 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
-/**
- * CORS (Cross-Origin Resource Sharing) configuration
- *
- * This configuration allows the SpringBoot API to accept requests from different origins
- * which is essential since our frontend (React, Angular) runs on a different port from our backend
- *
- * CORS is a security feature implemented by web browsers that blocks requests from one domain to another unless
- * explicitly allowed by the server
- *
- * Key CORS concepts we handle here:
- * - Allowed Origins: which domains can make requests to our API
- * - Allowed Methods: which HTTP methods we permit
- * - Allowed Headers: which headers can be sent with requests
- * - Credentials: Whether cookies and authentication can be included
- */
-
 @Configuration
 public class CorsConfig {
 
-    // Inject frontend URL from application.yaml
     @Value("${spring.application.frontend-url}")
     private String frontendUrl;
 
-    /**
-     * CORS config source bean
-     *
-     * This bean defines the CORS policy for the entire app
-     * Spring Security will use this configuration to handle preflight requests and
-     * validate cross-origin requests
-     *
-     * @return CorsConfigurationSource with our CORS policy
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(){
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+        // Main API CORS configuration
         CorsConfiguration configuration = new CorsConfiguration();
-
-        //  the allowed origins
-        // TODO: In production we will specify exact origins for security
         configuration.setAllowedOriginPatterns(Arrays.asList(
-                frontendUrl, // our front end app
-                "http://localhost:3000", // React default dev server
-                "http://localhost:3001", // Alternative React port
-                "http://localhost:4200", // Angular default dev server
-                "http://127.0.0.1:3000"  // Alternative localhost format
+                frontendUrl,
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:4200",
+                "http://127.0.0.1:3000"
         ));
 
-        //  allowed HTTP methods
         configuration.setAllowedMethods(Arrays.asList(
-                "GET",     // Reading data
-                "POST",    // Creating data
-                "PUT",     // Updating data (full replacement)
-                "PATCH",   // Updating data (partial update)
-                "DELETE",  // Deleting data
-                "OPTIONS"  // Preflight requests
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
 
-        //  allowed headers
         configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",    // JWT tokens
-                "Content-Type",     // Request body format (JSON, etc.)
-                "Accept",          // Response format preferences
-                "Origin",          // Request origin
-                "Access-Control-Request-Method",  // Preflight method info
-                "Access-Control-Request-Headers", // Preflight headers info
-                "X-Requested-With", // AJAX request identifier
-                "Cache-Control"     // Caching directives
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers",
+                "X-Requested-With",
+                "Cache-Control"
         ));
 
-        // Headers that the client can read from responses
         configuration.setExposedHeaders(Arrays.asList(
-                "Authorization",           // In case we return new tokens
+                "Authorization",
                 "Access-Control-Allow-Origin",
                 "Access-Control-Allow-Credentials"
         ));
 
-        // Allow credentials (cookies, authorization headers)
-        // This is required for JWT authentication via Authorization header
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
-        // Set max age for preflight cache (how long browsers cace CORS info)
-        configuration.setMaxAge(360L); // 1hour
+        // Apply to API endpoints only
+        source.registerCorsConfiguration("/api/**", configuration);
 
-        // Apply this configuration to all endpoints
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        // H2 Console - Allow all origins without CORS restrictions
+        CorsConfiguration h2Config = new CorsConfiguration();
+        h2Config.addAllowedOriginPattern("*");
+        h2Config.addAllowedHeader("*");
+        h2Config.addAllowedMethod("*");
+        h2Config.setAllowCredentials(false);
+        source.registerCorsConfiguration("/h2-console/**", h2Config);
 
         return source;
     }

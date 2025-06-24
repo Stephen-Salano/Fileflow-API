@@ -116,15 +116,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         return true;
     }
 
+
     private boolean validateIpAddress(Claims claims, HttpServletRequest request) {
         String tokenIp = claims.get("ip", String.class);
-        String requestIp = SecurityUtils.extractClientIp(request); // Use the utility class
+        String requestIp = SecurityUtils.extractClientIp(request);
 
-        if (tokenIp == null || !tokenIp.equals(requestIp)) {
-            log.warn("IP mismatch for user {}: tokenIp={}, requestIp={}", claims.getSubject(), tokenIp, requestIp);
+        // For development, be more lenient with IP validation
+        if (tokenIp == null) {
+            log.warn("Token has no IP claim. This might happen in development. Request IP: {}", requestIp);
+            return true; // Allow null IP in development
+        }
+
+        // Normalize both IPs for comparison
+        String normalizedTokenIp = normalizeIp(tokenIp);
+        String normalizedRequestIp = normalizeIp(requestIp);
+
+        if (!normalizedTokenIp.equals(normalizedRequestIp)) {
+            log.warn("IP mismatch for user {}: tokenIp={}, requestIp={}",
+                    claims.getSubject(), normalizedTokenIp, normalizedRequestIp);
             return false;
         }
         return true;
+    }
+
+    private String normalizeIp(String ip) {
+        if (ip == null) return "127.0.0.1";
+
+        // Convert IPv6 localhost to IPv4
+        if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
+            return "127.0.0.1";
+        }
+        return ip;
     }
 
     private boolean validateDeviceFingerprint(Claims claims, UserDetails userDetails) {

@@ -12,7 +12,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.ArrayList;
@@ -84,9 +84,28 @@ public class SecurityConfig {
         }
 
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                // Using our custom corsConfig
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .csrf(csrf -> {
+                    if (isDevOrTest) {
+                        // Disable CSRF for H2 console and other dev endpoints
+                        csrf.ignoringRequestMatchers("/h2-console/**", "/actuator/**")
+                                .disable();
+                    } else {
+                        csrf.disable();
+                    }
+                })
+                .cors(cors -> {
+                    if (isDevOrTest) {
+                        // For dev/test: disable CORS for H2, use custom config for API
+                        cors.configurationSource(request -> {
+                            if (request.getRequestURI().startsWith("/h2-console")) {
+                                return new CorsConfiguration().applyPermitDefaultValues();
+                            }
+                            return corsConfigurationSource.getCorsConfiguration(request);
+                        });
+                    } else {
+                        cors.configurationSource(corsConfigurationSource);
+                    }
+                })
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(permitList.toArray(new String[0])).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
@@ -98,7 +117,10 @@ public class SecurityConfig {
                 .addFilterAfter(securityHeadersConfig, UsernamePasswordAuthenticationFilter.class);
 
         if (isDevOrTest) {
-            http.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
+            http.headers(headers -> headers
+                    .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
+                    .httpStrictTransportSecurity(HeadersConfigurer.HstsConfig::disable)
+            );
         }
 
         return http.build();

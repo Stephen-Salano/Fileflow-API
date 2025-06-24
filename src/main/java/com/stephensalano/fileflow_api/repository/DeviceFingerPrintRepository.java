@@ -5,11 +5,14 @@ import com.stephensalano.fileflow_api.entities.DeviceFingerPrint;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Repository
 public interface DeviceFingerPrintRepository extends JpaRepository<DeviceFingerPrint, UUID> {
 
     /**
@@ -22,6 +25,7 @@ public interface DeviceFingerPrintRepository extends JpaRepository<DeviceFingerP
     List<DeviceFingerPrint> findAllByAccount(Account account);
 
     @Modifying
-    @Query("UPDATE DeviceFingerprint d SET d.trusted = :trusted WHERE d.account = :account AND d.fingerprintHash = :hash")
+    @Query("UPDATE DeviceFingerPrint d SET d.trusted = :trusted WHERE d.account = :account AND d.fingerPrintHash = :hash")
+    @Transactional
     void updateTrustedStatus(Account account, String hash, boolean trusted);
 }

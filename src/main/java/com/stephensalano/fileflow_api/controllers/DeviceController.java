@@ -44,7 +44,7 @@ public class DeviceController {
                 ));
     }
 
-    @PostMapping("/{id}/trust")
+    @PostMapping("/{fingerprintId}/trust")
     public ResponseEntity<Map<String, Object>> trustDevice(@PathVariable UUID fingerprintId, @AuthenticationPrincipal Account account) {
         deviceFingerprintService.trustDevice(account, fingerprintId);
         return ResponseEntity.status(HttpStatus.OK)
@@ -54,7 +54,7 @@ public class DeviceController {
                 ));
     }
 
-    @PostMapping("/{id}/untrust")
+    @PostMapping("/{fingerprintId}/untrust")
     public ResponseEntity<Map<String, Object>> untrustDevice(@PathVariable UUID fingerprintId, @AuthenticationPrincipal Account account) {
         deviceFingerprintService.untrustDevice(account, fingerprintId);
         return ResponseEntity.status(HttpStatus.OK)
