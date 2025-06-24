@@ -1,6 +1,6 @@
 package com.stephensalano.fileflow_api.configs.security;
 
-import com.stephensalano.fileflow_api.entities.Role;
+import com.stephensalano.fileflow_api.configs.SecurityHeadersConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,13 +45,14 @@ public class SecurityConfig {
     // Dependencies injected via constructor
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+    private final SecurityHeadersConfig securityHeadersConfig;
 
     /**
      * Password encoder bean using BCrypt
-     *
+     * <p>
      * Bcrypt is a strong, adaptive hashing function designed for passwords.
      * It automatically handles salt generation and is resistant to rainbow table attacks
-     *
+     *</p>
      * @return BCryptPasswordEncoder instance
      */
     @Bean
@@ -61,11 +62,12 @@ public class SecurityConfig {
 
     /**
      * Authentication provider that uses our custom UserDetailsService
-     *
+     * <p>
      * This provider:
      * - Uses our AccountDetailsService to load user information
      * - Uses Bcrypt to verify passwords
      * - Integrates with Spring Security's authentication mechanism
+     * </p>
      * @return DaoAuthenticationProvider configured for our current application
      */
     @Bean
@@ -78,9 +80,10 @@ public class SecurityConfig {
 
     /**
      * Authentication manager bean
-     *
+     *<p>
      * This manager orchestrates the authentication process and is used by our login endpoint to authenticate user
      * credentials
+     * </p>
      * @param configuration Spring's authentication configuration
      * @return AuthenticationManager instance
      * @throws Exception in case of errors
@@ -132,18 +135,19 @@ public class SecurityConfig {
 
                 // Add our JWT filter before the standard username/password filter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(securityHeadersConfig, UsernamePasswordAuthenticationFilter.class)
 
                 // configure headers for H2 console (development only)
-                /**
-                 * H2’s web console runs inside an HTML <iframe> by default.
-                 *
-                 * Modern browsers, by default, will block any page from being framed if the server doesn’t
-                 * explicitly allow it (to protect against clickjacking).
-                 *
-                 * Spring Security, by default, sets X-Frame-Options: DENY (no framing at all).
-                 *
-                 * “It’s fine to embed this page in a frame—as long as the framing page comes from this
-                 * same application (same scheme/host/port).”
+                /*
+                  H2’s web console runs inside an HTML <iframe> by default.
+
+                  Modern browsers, by default, will block any page from being framed if the server doesn’t
+                  explicitly allow it (to protect against clickjacking).
+
+                  Spring Security, by default, sets X-Frame-Options: DENY (no framing at all).
+
+                  “It’s fine to embed this page in a frame—as long as the framing page comes from this
+                  same application (same scheme/host/port).”
                  */
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
