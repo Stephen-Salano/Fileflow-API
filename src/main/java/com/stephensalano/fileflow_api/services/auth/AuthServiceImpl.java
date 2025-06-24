@@ -41,8 +41,10 @@ public class AuthServiceImpl  implements AuthService{
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final VerificationTokenService verificationTokenService;
+    // for device fingerprinting
     private final DeviceFingerprintService deviceFingerprintService;
     private final HttpServletRequest request;
+
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;

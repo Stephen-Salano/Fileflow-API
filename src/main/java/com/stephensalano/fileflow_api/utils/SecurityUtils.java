@@ -12,9 +12,8 @@ public class SecurityUtils {
      */
     public static String extractClientIp(HttpServletRequest request){
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()){
-            return forwarded.split(",")[0];
-        }
-        return request.getRemoteAddr();
+        return (forwarded != null && !forwarded.isBlank())
+                ? forwarded.split(",")[0]
+                : request.getRemoteAddr();
     }
 }

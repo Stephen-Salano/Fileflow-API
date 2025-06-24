@@ -83,7 +83,7 @@ public class JwtService {
             claims.put(FP_CLAIM, context.fingerprintHash());
         }
 
-        String issuer = applicationName + '_' + getCurrentEnvironment();
+        String issuer = getIssuer();
 
         String token = Jwts.builder()
                 .claims(claims)
@@ -97,6 +97,10 @@ public class JwtService {
         log.info("Generated token: user={}, type={}, expires={}c, aud={}",
                 userDetails.getUsername(), type, exp, audience);
         return token;
+    }
+
+    public String getIssuer() {
+        return applicationName + '_' + getCurrentEnvironment();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
@@ -169,7 +173,7 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
 
         try {
             return Jwts.parser()
@@ -183,7 +187,7 @@ public class JwtService {
         }
     }
 
-    private SecretKey getSigningKey(){
+    public SecretKey getSigningKey(){
         try{
             byte[] keyBytes = Decoders.BASE64.decode(signingKey);
             return Keys.hmacShaKeyFor(keyBytes);
