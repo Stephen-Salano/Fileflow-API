@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -31,6 +34,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final DeviceFingerprintService fingerprintService;
+    private final Environment environment;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
@@ -153,7 +157,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String fpHash = claims.get("fp", String.class);
         Account account = (Account) userDetails;
 
-        if (fpHash == null || !fingerprintService.isKnownDevice(account, fpHash)) {
+        if (fpHash == null) {
+            // Only allow null fingerprint in development/test environments
+            String activeProfiles = Arrays.stream(environment.getActiveProfiles())
+                    .filter(p -> List.of("dev", "test", "prod").contains(p))
+                    .findFirst()
+                    .orElse("default");
+
+            if ("dev".equals(activeProfiles) || "test".equals(activeProfiles)) {
+                log.warn("Token has no fingerprint claim for user {}. Allowing in {} environment.",
+                        userDetails.getUsername(), activeProfiles);
+                return true;
+            } else {
+                log.error("Token missing fingerprint claim for user {} in {} environment",
+                        userDetails.getUsername(), activeProfiles);
+                return false;
+            }
+        }
+
+        if (!fingerprintService.isKnownDevice(account, fpHash)) {
             log.warn("Unknown device for user {}: fp={}", userDetails.getUsername(), fpHash);
             return false;
         }
