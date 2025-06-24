@@ -52,6 +52,9 @@ public class DeviceFingerPrint {
     @Column(name = "last_used_at", nullable = false)
     private LocalDateTime lastUsedAt;
 
+    @Column(name = "trusted", nullable = false)
+    private boolean trusted = true; // we default to trusted on first login
+
 
     @PrePersist
     protected void onCreate(){

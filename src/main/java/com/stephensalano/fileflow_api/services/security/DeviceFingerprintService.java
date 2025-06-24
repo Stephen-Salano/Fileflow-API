@@ -5,6 +5,7 @@ import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.entities.DeviceFingerPrint;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -34,4 +35,8 @@ public interface DeviceFingerprintService {
      * @return list of known fingerprints
      */
     List<DeviceFingerPrint> listDevices(Account account);
+
+    void trustDevice(Account account, UUID fingerprintId);
+    void untrustDevice(Account account, UUID fingerprintId);
+    void removeDevice(Account account, String fingerprintHash);
 }

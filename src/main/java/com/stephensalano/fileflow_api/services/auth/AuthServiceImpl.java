@@ -254,7 +254,36 @@ public class AuthServiceImpl  implements AuthService{
             // invalidate all refresh tokens for this account
             refreshTokenRepository.invalidateAllByAccount(account);
 
+            // 2 We perform the device specific cleanup from the current session
+//            handleDeviceFingerprintLogout(account);
+
             log.info("Logout successful for user: {}", account.getUsername());
+        }
+    }
+
+    /**
+     * Incase we want to remove that device once and for all
+     * Extracts the device fingerprint from the current session's JWT and removes it.
+     * This is a non-critical operation; failure will be logged but will not stop the logout process.
+     *
+     * @param account The account being logged out.
+     */
+    private void handleDeviceFingerprintLogout(Account account) {
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return; // No token present, nothing to clean up.
+        }
+
+        final String token = authHeader.substring(7);
+        try {
+            String fpHash = jwtService.extractFingerprintHash(token);
+            if (fpHash != null && !fpHash.isBlank()) {
+                log.debug("Removing device fingerprint on logout: {}", fpHash);
+                deviceFingerprintService.removeDevice(account, fpHash);
+            }
+        } catch (Exception e) {
+            // This is not a critical failure. The user is logged out regardless.
+            log.warn("Could not extract or remove fingerprint on logout for user {}: {}", account.getUsername(), e.getMessage());
         }
     }
 

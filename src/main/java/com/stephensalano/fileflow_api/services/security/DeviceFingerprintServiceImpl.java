@@ -3,6 +3,7 @@ package com.stephensalano.fileflow_api.services.security;
 import com.stephensalano.fileflow_api.dto.requests.DeviceFingerprintRequest;
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.entities.DeviceFingerPrint;
+import com.stephensalano.fileflow_api.exceptions.ResourceNotFoundException;
 import com.stephensalano.fileflow_api.repository.DeviceFingerPrintRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -80,5 +82,30 @@ public class DeviceFingerprintServiceImpl implements DeviceFingerprintService{
     @Override
     public List<DeviceFingerPrint> listDevices(Account account) {
         return repository.findAllByAccount(account);
+    }
+
+    @Override
+    @Transactional
+    public void trustDevice(Account account, UUID fingerprintId) {
+        var fp = repository.findById(fingerprintId)
+                .filter(d -> d.getAccount().equals(account))
+                .orElseThrow(() -> new ResourceNotFoundException("Device fingerprint not found"));
+        fp.setTrusted(true);
+        repository.save(fp);
+    }
+
+    @Override
+    @Transactional
+    public void untrustDevice(Account account, UUID fingerprintId) {
+        var fp = repository.findById(fingerprintId)
+                .filter(d -> d.getAccount().equals(account))
+                .orElseThrow(() -> new ResourceNotFoundException("Device fingerprint not found"));
+        repository.updateTrustedStatus(account, fp.getFingerPrintHash(), false);
+    }
+
+    @Override
+    public void removeDevice(Account account, String fingerprintHash) {
+        repository.findByAccountAndFingerPrintHash(account, fingerprintHash).ifPresent(repository::delete);
+
     }
 }
