@@ -146,110 +146,182 @@ A modern Spring Boot application for secure media upload, processing, and social
 ## 📁 Project Structure
 
 ```
-src/main/java/com/stephensalano/fileflow_api/
-├── config/                       # Configuration classes
-│   ├── security/                 # Security-specific configurations
-│   │   ├── JwtAuthFilter.java    # JWT authentication filter
-│   │   ├── JwtService.java       # JWT token handling service
-│   │   └── SecurityConfig.java   # Spring Security configuration
-│   ├── AppConfig.java            # General application configuration
-│   ├── AuditingConfig.java       # JPA auditing configuration
-│   ├── CorsConfig.java           # CORS configuration
-│   └── StorageConfig.java        # File storage configuration
+Fileflow-API/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/stephensalano/fileflow_api/
+│   │   │       ├── configs/                       # Configuration classes
+│   │   │       │   ├── security/                  # Security-specific configurations
+│   │   │       │   │   ├── JwtAuthFilter.java     # JWT authentication filter
+│   │   │       │   │   ├── JwtService.java        # JWT token handling service
+│   │   │       │   │   └── SecurityConfig.java    # Spring Security configuration
+│   │   │       │   ├── AppConfig.java             # General application configuration
+│   │   │       │   ├── AsyncConfig.java           # Async task execution configuration
+│   │   │       │   ├── AuditingConfig.java        # JPA auditing configuration
+│   │   │       │   ├── CorsConfig.java            # CORS configuration
+│   │   │       │   ├── EmailConfig.java           # Email service configuration
+│   │   │       │   ├── SecurityHeadersConfig.java # Security headers configuration
+│   │   │       │   ├── StorageConfig.java         # File storage configuration
+│   │   │       │   └── SwaggerConfig.java         # API documentation configuration
+│   │   │       │
+│   │   │       ├── controllers/                   # REST Controllers
+│   │   │       │   ├── AuthController.java        # Authentication endpoints
+│   │   │       │   ├── CommentController.java     # Comment management endpoints
+│   │   │       │   ├── DeviceController.java      # Device fingerprint endpoints
+│   │   │       │   ├── LikeController.java        # Like/reaction endpoints
+│   │   │       │   ├── MediaController.java       # Media file handling endpoints
+│   │   │       │   ├── PostController.java        # Social post endpoints
+│   │   │       │   └── UserController.java        # User management endpoints
+│   │   │       │
+│   │   │       ├── dto/                           # Data Transfer Objects
+│   │   │       │   ├── requests/                  # Request DTOs
+│   │   │       │   │   ├── AuthRequest.java       # Authentication request
+│   │   │       │   │   ├── CommentRequest.java    # Comment creation request
+│   │   │       │   │   ├── DeviceFingerprintRequest.java # Device fingerprint data
+│   │   │       │   │   ├── MediaUploadRequest.java # Media upload request
+│   │   │       │   │   ├── PostRequest.java       # Post creation request
+│   │   │       │   │   └── RegisterRequest.java   # User registration request
+│   │   │       │   ├── responses/                 # Response DTOs
+│   │   │       │   │   ├── AuthResponse.java      # Authentication response with tokens
+│   │   │       │   │   ├── CommentResponse.java   # Comment data response
+│   │   │       │   │   ├── DeviceFingerprintResponse.java # Device data response
+│   │   │       │   │   ├── MediaResponse.java     # Media data response
+│   │   │       │   │   ├── postResponse.java      # Post data response
+│   │   │       │   │   └── UserResponse.java      # User data response
+│   │   │       │   └── security/                  # Security-related DTOs
+│   │   │       │
+│   │   │       ├── entities/                      # JPA entities
+│   │   │       │   ├── Account.java               # Account entity for auth credentials
+│   │   │       │   ├── CollectionMedia.java       # Media collection item entity
+│   │   │       │   ├── CollectionMediaId.java     # Composite key for collection media
+│   │   │       │   ├── Comment.java               # Comment entity for post discussions
+│   │   │       │   ├── DeviceFingerPrint.java     # Device fingerprint entity
+│   │   │       │   ├── Follow.java                # Follow relationship entity
+│   │   │       │   ├── FollowId.java              # Composite key for follow relationship
+│   │   │       │   ├── Like.java                  # Like entity for content reactions
+│   │   │       │   ├── Media.java                 # Media file metadata entity
+│   │   │       │   ├── MediaCollection.java       # Media collection entity
+│   │   │       │   ├── MediaTag.java              # Media tagging entity
+│   │   │       │   ├── MediaVersion.java          # Media version history entity
+│   │   │       │   ├── Post.java                  # Post entity for social content
+│   │   │       │   ├── PostMedia.java             # Post-media relationship entity
+│   │   │       │   ├── PostMediaId.java           # Composite key for post media
+│   │   │       │   ├── ProcessingJob.java         # Media processing job entity
+│   │   │       │   ├── RefreshToken.java          # JWT refresh token entity
+│   │   │       │   ├── Role.java                  # User role enum (USER, ADMIN)
+│   │   │       │   ├── TokenTypes.java            # Token type enumeration
+│   │   │       │   ├── User.java                  # User entity with profile information
+│   │   │       │   └── VerificationToken.java     # Email verification token entity
+│   │   │       │
+│   │   │       ├── events/                        # Event listeners and publishers
+│   │   │       │   ├── MediaEventListener.java    # Media event listener
+│   │   │       │   ├── MediaProcessingEvent.java  # Media processing event
+│   │   │       │   ├── MediaUploadEvent.java      # Media upload event
+│   │   │       │   ├── OnRegistrationCompleteEvent.java # Registration event
+│   │   │       │   ├── OnWelcomeEvent.java        # Welcome email event
+│   │   │       │   └── RegistrationListener.java  # Registration event listener
+│   │   │       │
+│   │   │       ├── exceptions/                    # Custom exceptions
+│   │   │       │   ├── AccessDeniedException.java # Security access denied exception
+│   │   │       │   ├── BadRequestException.java   # Invalid request exception
+│   │   │       │   ├── GlobalExceptionHandler.java # Centralized exception handler
+│   │   │       │   ├── ProcessingException.java   # Media processing exception
+│   │   │       │   ├── ResourceNotFoundException.java # Entity not found exception
+│   │   │       │   └── StorageException.java      # File storage exception
+│   │   │       │
+│   │   │       ├── models/                        # Non-entity model classes
+│   │   │       │   ├── FileMetadata.java          # File metadata model
+│   │   │       │   └── ProcessingOptions.java     # Processing options model
+│   │   │       │
+│   │   │       ├── repository/                    # Data repositories
+│   │   │       │   ├── AccountRepository.java     # Account repository
+│   │   │       │   ├── CommentRepository.java     # Comment repository
+│   │   │       │   ├── DeviceFingerPrintRepository.java # Device fingerprint repository
+│   │   │       │   ├── LikeRepository.java        # Like repository
+│   │   │       │   ├── MediaRepository.java       # Media repository
+│   │   │       │   ├── PostRepository.java        # Post repository
+│   │   │       │   ├── RefreshTokenRepository.java # Refresh token repository
+│   │   │       │   ├── UserRepository.java        # User repository
+│   │   │       │   └── VerificationTokenRepository.java # Verification token repository
+│   │   │       │
+│   │   │       ├── services/                      # Service layer
+│   │   │       │   ├── auth/                      # Authentication services
+│   │   │       │   │   ├── AuthService.java       # Auth service interface
+│   │   │       │   │   └── AuthServiceImpl.java   # Auth service implementation
+│   │   │       │   ├── email/                     # Email services
+│   │   │       │   │   ├── EmailService.java      # Email service interface
+│   │   │       │   │   └── EmailServiceImpl.java  # Email service implementation
+│   │   │       │   ├── media/                     # Media handling services
+│   │   │       │   │   ├── CloudStorageServiceImpl.java # Cloud storage implementation
+│   │   │       │   │   ├── FileStorageService.java # File storage service interface
+│   │   │       │   │   ├── LocalStorageServiceImpl.java # Local storage implementation
+│   │   │       │   │   ├── MediaService.java      # Media service interface
+│   │   │       │   │   └── MediaServiceImpl.java  # Media service implementation
+│   │   │       │   ├── processing/                # Media processing services
+│   │   │       │   │   ├── FFmpegService.java     # FFmpeg service interface
+│   │   │       │   │   ├── FFmpegServiceImpl.java # FFmpeg service implementation
+│   │   │       │   │   ├── MetadataService.java   # Metadata extraction interface
+│   │   │       │   │   └── TikaMetadataServiceImpl.java # Apache Tika implementation
+│   │   │       │   ├── security/                  # Security services
+│   │   │       │   │   ├── DeviceFingerprintService.java # Device service interface
+│   │   │       │   │   └── DeviceFingerprintServiceImpl.java # Device service implementation
+│   │   │       │   ├── social/                    # Social feature services
+│   │   │       │   │   ├── CommentService.java    # Comment service interface
+│   │   │       │   │   ├── CommentServiceImpl.java # Comment service implementation
+│   │   │       │   │   ├── LikeService.java       # Like service interface
+│   │   │       │   │   ├── LikeServiceImpl.java   # Like service implementation
+│   │   │       │   │   ├── PostService.java       # Post service interface
+│   │   │       │   │   └── PostServiceImpl.java   # Post service implementation
+│   │   │       │   ├── user/                      # User-related services
+│   │   │       │   │   ├── AccountDetailsService.java # UserDetails service
+│   │   │       │   │   ├── UserService.java       # User service interface
+│   │   │       │   │   └── UserServiceImpl.java   # User service implementation
+│   │   │       │   └── verification_token/        # Token verification services
+│   │   │       │       ├── VerificationTokenService.java # Token service interface
+│   │   │       │       └── VerificationTokenServiceImpl.java # Token service implementation
+│   │   │       │
+│   │   │       ├── utils/                         # Utility classes
+│   │   │       │   ├── FileUtils.java             # File handling utilities
+│   │   │       │   ├── SecurityUtils.java         # Security-related utilities
+│   │   │       │   └── ValidationUtils.java       # Input validation utilities
+│   │   │       │
+│   │   │       └── FileflowApiApplication.java    # Main application class
+│   │   │
+│   │   └── resources/
+│   │       ├── templates.email/                   # Email template files
+│   │       │   ├── verification-email.html        # Email verification template
+│   │       │   └── welcome-email.html             # Welcome email template
+│   │       ├── application.yml                    # Base application configuration
+│   │       ├── application-dev.yml                # Development environment config
+│   │       ├── application-prod.yml               # Production environment config
+│   │       └── application-test.yml               # Testing environment config
+│   │
+│   └── test/
+│       └── java/
+│           └── com/stephensalano/fileflow_api/
+│               ├── controllers/                   # Controller tests
+│               │   ├── integration_tests/         # Integration tests
+│               │   │   ├── AuthControllerHappyPathRegistrationTest.java
+│               │   │   ├── AuthControllerHealthIntegrationTest.java
+│               │   │   └── AuthControllerInvalidRegistrationIntegrationTest.java
+│               │   └── unit_tests/                # Unit tests
+│               │       ├── AuthControllerLoginUnitTest.java
+│               │       └── AuthControllerRegisterUnitTest.java
+│               ├── security/                      # Security tests
+│               └── FileflowApiApplicationTests.java # Main application tests
 │
-├── controller/                   # REST Controllers
-│   ├── AuthController.java       # Authentication endpoints
-│   ├── UserController.java       # User management endpoints
-│   ├── MediaController.java      # Media file handling endpoints
-│   ├── PostController.java       # Social post endpoints
-│   ├── CommentController.java    # Comment endpoints
-│   └── LikeController.java       # Like/reaction endpoints
-│
-├── service/                      # Service layer
-│   ├── auth/                     # Authentication services
-│   │   ├── AuthService.java      # Authentication service interface
-│   │   └── AuthServiceImpl.java  # Authentication service implementation
-│   ├── user/                     # User-related services
-│   │   ├── UserService.java      # User service interface
-│   │   └── UserServiceImpl.java  # User service implementation
-│   ├── media/                    # Media processing services
-│   │   ├── MediaService.java     # Media service interface
-│   │   ├── MediaServiceImpl.java # Media service implementation
-│   │   ├── FileStorageService.java  # File storage service interface
-│   │   ├── LocalStorageServiceImpl.java  # Local storage implementation
-│   │   └── CloudStorageServiceImpl.java  # Cloud storage implementation
-│   ├── processing/               # Media processing services
-│   │   ├── FFmpegService.java    # FFmpeg processing service interface
-│   │   ├── FFmpegServiceImpl.java # FFmpeg implementation
-│   │   ├── MetadataService.java  # Metadata extraction service
-│   │   └── TikaMetadataServiceImpl.java # Apache Tika implementation
-│   └── social/                   # Social feature services
-│       ├── PostService.java      # Post service interface
-│       ├── PostServiceImpl.java  # Post service implementation
-│       ├── CommentService.java   # Comment service interface
-│       ├── CommentServiceImpl.java # Comment service implementation
-│       ├── LikeService.java      # Like service interface
-│       └── LikeServiceImpl.java  # Like service implementation
-│
-├── repository/                   # Data repositories
-│   ├── UserRepository.java       # User entity repository
-│   ├── TokenRepository.java      # Refresh token repository
-│   ├── MediaRepository.java      # Media file metadata repository
-│   ├── PostRepository.java       # Post repository
-│   ├── CommentRepository.java    # Comment repository
-│   └── LikeRepository.java       # Like repository
-│
-├── entity/                       # JPA entities
-│   ├── User.java                 # User entity
-│   ├── Role.java                 # User role entity
-│   ├── Token.java                # JWT refresh token entity
-│   ├── Media.java                # Media file metadata entity
-│   ├── Post.java                 # Post entity
-│   ├── Comment.java              # Comment entity
-│   └── Like.java                 # Like entity
-│
-├── dto/                          # Data Transfer Objects
-│   ├── request/                  # Request DTOs
-│   │   ├── AuthRequest.java      # Authentication request
-│   │   ├── RegisterRequest.java  # User registration request
-│   │   ├── MediaUploadRequest.java # Media upload request
-│   │   ├── PostRequest.java      # Post creation request
-│   │   └── CommentRequest.java   # Comment creation request
-│   └── response/                 # Response DTOs
-│       ├── AuthResponse.java     # Authentication response with tokens
-│       ├── UserResponse.java     # User data response
-│       ├── MediaResponse.java    # Media data response
-│       ├── PostResponse.java     # Post data response
-│       └── CommentResponse.java  # Comment data response
-│
-├── exception/                    # Custom exceptions
-│   ├── GlobalExceptionHandler.java  # Centralized exception handler
-│   ├── ResourceNotFoundException.java  # Entity not found exception
-│   ├── BadRequestException.java  # Invalid request exception
-│   ├── StorageException.java     # File storage exception
-│   ├── ProcessingException.java  # Media processing exception
-│   └── SecurityException.java    # Security-related exceptions
-│
-├── util/                         # Utility classes
-│   ├── FileUtils.java            # File handling utilities
-│   ├── SecurityUtils.java        # Security-related utilities
-│   └── ValidationUtils.java      # Input validation utilities
-│
-├── event/                        # Event listeners and publishers
-│   ├── MediaUploadEvent.java     # Media upload event class
-│   ├── MediaProcessingEvent.java # Media processing event
-│   └── MediaEventListener.java   # Event listener for async processing
-│
-├── model/                        # Non-entity model classes
-│   ├── FileMetadata.java         # File metadata model
-│   └── ProcessingOptions.java    # Processing options model
-│
-└── FileflowApiApplication.java   # Main application class
+├── .gitattributes                 # Git attributes configuration
+├── .gitignore                     # Git ignore configuration
+├── compose.yaml                   # Docker Compose configuration
+├── LICENSE                        # MIT License file
+├── mvnw                           # Maven wrapper script (Unix)
+├── mvnw.cmd                       # Maven wrapper script (Windows)
+├── pom.xml                        # Maven project configuration
+└── README.MD                      # Project documentation
 ```
 
 ## 🔒 API Endpoints
-
-### Authentication Endpoints
 - `POST /api/v1/auth/register` - Register a new user
 - `POST /api/v1/auth/authenticate` - Login and get JWT tokens
 - `POST /api/v1/auth/refresh-token` - Refresh access token
