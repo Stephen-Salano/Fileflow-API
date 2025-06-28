@@ -27,16 +27,6 @@ spring:
     port: ${TEST_MAIL_PORT}
     username: ${TEST_MAIL_USERNAME}
     password: ${TEST_MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enabled: true
-            required: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
 
 # Test-specific Logging
 logging:

@@ -11,9 +11,18 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  mail:
+    host: ${TEST_MAIL_HOST}
+    port: ${TEST_MAIL_PORT}
+    username: ${TEST_MAIL_USERNAME}
+    password: ${TEST_MAIL_PASSWORD}
 
 #Dev specific Logging
 logging:
   level:
     com.stephensalano.fileflow_api: DEBUG
     org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.Transaction: TRACE
+    org.springframework.orm.jpa.JpaTransactionManager: TRACE

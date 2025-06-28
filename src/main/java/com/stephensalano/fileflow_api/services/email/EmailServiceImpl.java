@@ -44,17 +44,7 @@ public class EmailServiceImpl implements EmailService{
     public void sendVerificationEmail(String to, String username, String token) {
         try{
             // prepare verification link(URL) with token
-            String verificationUrl = frontendUrl + "/verify?token=" + token;
-
-            // Set up the Thymeleaf context with a few variables for the template
-            /*
-            We are using Thymeleaf's context to pass three values into our HTML template
-            - This is how Thymeleaf knows what to fill in
-             */
-            Context context = new Context();
-            context.setVariable("name", username); // so we can say something like "Hi Alice"
-            context.setVariable("verificationUrl", verificationUrl); // The link we generated
-            context.setVariable("appName", appName); // to brand the email
+            Context context = getContext(username, token);
 
             /*
             Thymeleaf loads your verification-email.html file, replaces the placeholders with the values from context
@@ -78,6 +68,21 @@ public class EmailServiceImpl implements EmailService{
         } catch (MessagingException e){
             log.error("Failed to send verification email to{}: {}", to, e.getMessage());
         }
+    }
+
+    private Context getContext(String username, String token) {
+        String verificationUrl = frontendUrl + "/verify?token=" + token;
+
+        // Set up the Thymeleaf context with a few variables for the template
+            /*
+            We are using Thymeleaf's context to pass three values into our HTML template
+            - This is how Thymeleaf knows what to fill in
+             */
+        Context context = new Context();
+        context.setVariable("name", username); // so we can say something like "Hi Alice"
+        context.setVariable("verificationUrl", verificationUrl); // The link we generated
+        context.setVariable("appName", appName); // to brand the email
+        return context;
     }
 
     @Override

@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_PROD_URL}
+    username: ${DB_PROD_USERNAME}
+    password: ${DB_PROD_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -11,6 +11,12 @@ spring:
     properties:
       hibernate:
         format_sql: false
+  # Mailing capabilities TODO: change to prod later
+  mail:
+    host: ${TEST_MAIL_HOST}
+    port: ${TEST_MAIL_PORT}
+    username: ${TEST_MAIL_USERNAME}
+    password: ${TEST_MAIL_PASSWORD}
 
 # Production logging (minimal)
 logging:

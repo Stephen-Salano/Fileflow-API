@@ -18,6 +18,19 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+    # common mail properties
+  mail:
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enabled: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 # JWT Configuration with environment variables
 jwt:
   secret-key:  ${JWT_SECRET_KEY}
