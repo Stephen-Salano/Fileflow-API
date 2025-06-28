@@ -1,6 +1,7 @@
 package com.stephensalano.fileflow_api.services.auth;
 
 import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
+import com.stephensalano.fileflow_api.dto.requests.PasswordResetRequest;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
 import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.entities.Account;
@@ -57,4 +58,18 @@ public interface AuthService {
      * @return AuthResponse with new tokens
      */
     AuthResponse refreshToken(String refreshToken);
+
+    /**
+     * Initiates the password reset process for  user
+     * Generates a password reset token and triggers an email to be sent
+     *
+     * @param email the user's email
+     */
+    void requestPasswordReset(String email);
+
+    /**
+     * Resets the users password
+     * @param passwordResetRequest the password reset request containing the token and new password
+     */
+    void resetPassword(PasswordResetRequest passwordResetRequest);
 }

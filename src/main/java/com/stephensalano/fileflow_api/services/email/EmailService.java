@@ -11,9 +11,23 @@ public interface EmailService {
      * @param to the recipient's email address
      * @param username The recipients username
      * @param token the verification token
-     * @return true if the email was sent successfully, false otherwise
      */
     void sendVerificationEmail(String to, String username, String token);
 
     void sendWelcomeEmail(String to, String username);
+
+    /**
+     * Sends a password reset email with a link containing the reset token
+     * @param to the recipient's email address
+     * @param username The recipients username
+     * @param token the password reset token
+     */
+    void sendPasswordResetEmail(String to, String username, String token);
+
+    /**
+     * Sends a confirmation email after a password has been successfully reset
+     * @param to the recipient's email address
+     * @param username The recipients username
+     */
+    void sendPasswordResetSuccessEmail(String to, String username);
 }

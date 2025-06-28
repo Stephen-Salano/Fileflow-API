@@ -3,10 +3,13 @@ package com.stephensalano.fileflow_api.services.auth;
 import com.stephensalano.fileflow_api.configs.security.JwtService;
 import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
 import com.stephensalano.fileflow_api.dto.requests.DeviceFingerprintRequest;
+import com.stephensalano.fileflow_api.dto.requests.PasswordResetRequest;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
 import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.dto.security.SecurityContext;
 import com.stephensalano.fileflow_api.entities.*;
+import com.stephensalano.fileflow_api.events.OnPasswordResetRequestEvent;
+import com.stephensalano.fileflow_api.events.OnPasswordResetSuccessEvent;
 import com.stephensalano.fileflow_api.events.OnRegistrationCompleteEvent;
 import com.stephensalano.fileflow_api.events.OnWelcomeEvent;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
@@ -15,6 +18,7 @@ import com.stephensalano.fileflow_api.repository.UserRepository;
 import com.stephensalano.fileflow_api.services.security.DeviceFingerprintService;
 import com.stephensalano.fileflow_api.services.verification_token.VerificationTokenService;
 import com.stephensalano.fileflow_api.utils.SecurityUtils;
+import com.stephensalano.fileflow_api.utils.ValidationUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -107,8 +111,7 @@ public class AuthServiceImpl  implements AuthService{
     public boolean verifyEmail(String token) {
 
         // Validate the token
-        Optional<VerificationToken> verificationTokenOpt = verificationTokenService.validateToken(token);
-
+        Optional<VerificationToken> verificationTokenOpt = verificationTokenService.validateToken(token, TokenTypes.VERIFICATION);
         if (verificationTokenOpt.isEmpty()){
             log.info("Invalid or expired verification token: {}", token);
             return false;
@@ -375,5 +378,66 @@ public class AuthServiceImpl  implements AuthService{
             deviceFingerprintService.registerFingerprint(account, fingerprintRequest)
                     .exceptionally(ex -> { log.warn("Async device registration failed for user {}: {}", account.getUsername(), ex.getMessage()); return null; });
         }
+    }
+
+    @Override
+    @Transactional
+    public void requestPasswordReset(String email) {
+        log.info("Password reset requested for email: {}", email);
+        Account account = accountRepository.findByEmail(email)
+                .orElse(null); // Find account, but throw an error to prevent email enumeration
+
+        if (account != null){
+            // Generate a password reset token
+            VerificationToken resetToken = verificationTokenService.createToken(account, TokenTypes.PASSWORD_RESET);
+
+            // publish an event to send the email
+            eventPublisher.publishEvent(new OnPasswordResetRequestEvent(
+                    this,
+                    account.getEmail(),
+                    account.getUsername(),
+                    resetToken.getToken()
+
+            ));
+            log.info("Password reset token generated for user: {}. email will be sent", account.getUsername());
+
+        } else {
+            // Security: Do not reveal that the email doesn't exist
+            log.warn("Password reset requested for non-existent email: {} No action taken", email);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(PasswordResetRequest request) {
+        log.info("Attempting to reset password with a token");
+
+        //Serverside validation check for matching passwords
+        ValidationUtils.validatePasswordsMatch(request.newPassword(), request.confirmPassword());
+
+        //Validate the token and ensure it's a PASSWORD_RESET token
+        VerificationToken verificationToken = verificationTokenService.validateToken(request.token(), TokenTypes.PASSWORD_RESET)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token"));
+
+        Account account = verificationToken.getAccount();
+
+        // Set the new password
+        account.setPassword(passwordEncoder.encode(request.newPassword()));
+        accountRepository.saveAndFlush(account);
+
+        // Invalidate all refresh tokens for this user security
+        refreshTokenRepository.invalidateAllByAccount(account);
+        log.info("All existing refresh token invalidated for user: {}", account.getUsername());
+
+        // Delete the used password reset toke
+        verificationTokenService.deleteToken(verificationToken);
+
+        // Publish the event to notify the user of the successful change
+        eventPublisher.publishEvent(new OnPasswordResetSuccessEvent(
+                this,
+                account.getEmail(),
+                account.getUsername()
+        ));
+        log.info("Password reset successful for user: {}", account.getUsername());
     }
 }

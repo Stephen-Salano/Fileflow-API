@@ -1,6 +1,8 @@
 package com.stephensalano.fileflow_api.controllers;
 
 import com.stephensalano.fileflow_api.dto.requests.AuthRequest;
+import com.stephensalano.fileflow_api.dto.requests.ForgotPasswordRequest;
+import com.stephensalano.fileflow_api.dto.requests.PasswordResetRequest;
 import com.stephensalano.fileflow_api.dto.requests.RegisterRequest;
 import com.stephensalano.fileflow_api.dto.responses.AuthResponse;
 import com.stephensalano.fileflow_api.entities.Account;
@@ -296,6 +298,45 @@ public class AuthController {
                     .body(Map.of(
                             "success", false,
                             "message", "Token refresh failed due to server error"
+                    ));
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest
+            ){
+        log.info("Forgot password request received for email: {}", forgotPasswordRequest.email());
+        authService.requestPasswordReset(forgotPasswordRequest.email());
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "if an account with that email exists, a password reset link has been sent."
+        ));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(
+            @Valid @RequestBody PasswordResetRequest passwordResetRequest
+            ){
+        try{
+            authService.resetPassword(passwordResetRequest);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Your password has been reset successfully. You can now log in"
+            ));
+        } catch (IllegalArgumentException e){
+            log.warn("Password reset failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "success", false,
+                            "message", e.getMessage()
+                    ));
+        }catch (Exception e){
+            log.warn("Unexpected error during password reset: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Password reset failed due to server error. Please try again later."
                     ));
         }
     }

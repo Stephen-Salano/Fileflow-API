@@ -41,6 +41,7 @@ public class EmailServiceImpl implements EmailService{
     private String appName;
 
     @Override
+    @Async("emailTaskExecutor")
     public void sendVerificationEmail(String to, String username, String token) {
         try{
             // prepare verification link(URL) with token
@@ -86,6 +87,7 @@ public class EmailServiceImpl implements EmailService{
     }
 
     @Override
+    @Async("emailTaskExecutor")
     public void sendWelcomeEmail(String to, String username) {
         try{
             // Set up the Thymeleaf context with variables for the template
@@ -113,5 +115,58 @@ public class EmailServiceImpl implements EmailService{
         } catch (MessagingException e){
             log.error("Failed to send the welcome email to {}: {}", to, e.getMessage());
         }
+    }
+
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendPasswordResetEmail(String to, String username, String token) {
+        try {
+            String resetUrl = frontendUrl + "/reset-password?token=" + token;
+
+            Context context = new Context();
+            context.setVariable("name", username);
+            context.setVariable("resetUrl", resetUrl);
+            context.setVariable("appName", appName);
+
+            String emailContent = templateEngine.process("password-reset-email", context);
+            MimeMessage message = createMimeMessage(to, appName + " - Password Reset Request", emailContent);
+            mailSender.send(message);
+            log.info("Password reset email sent to: {}", to);
+        } catch (MessagingException e){
+            log.error("Failed to send password reset email to {} : {}", to, e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendPasswordResetSuccessEmail(String to, String username) {
+
+        try {
+            Context context = new Context();
+            context.setVariable("name", username);
+            context.setVariable("loginUrl", frontendUrl + "/login");
+            context.setVariable("appName", appName);
+
+            String emailContent = templateEngine.process("password-reset-success-email", context);
+
+            MimeMessage message = createMimeMessage(to, appName+ " - Your password has been reset", emailContent);
+            mailSender.send(message);
+            log.info("Password reset confirmation email sent to: {}", to);
+        } catch (MessagingException e) {
+            log.error("Failed to send password reset confirmation email to {}: {}", to, e.getMessage(), e);
+        }
+    }
+
+    // Helper method for message creation
+    private MimeMessage createMimeMessage(String to, String subject, String emailContent) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(
+                message, true, StandardCharsets.UTF_8.name()
+        );
+        helper.setFrom(fromEmail);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(emailContent, true);
+        return message;
     }
 }

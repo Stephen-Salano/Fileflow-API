@@ -4,7 +4,6 @@ import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.entities.TokenTypes;
 import com.stephensalano.fileflow_api.entities.VerificationToken;
 import com.stephensalano.fileflow_api.repository.VerificationTokenRepository;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -50,15 +49,12 @@ public class VerificationTokenServiceImpl implements VerificationTokenService{
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<VerificationToken> validateToken(String token) {
-        // Find the token and store it
-        Optional<VerificationToken> verificationToken = findByToken(token);
-
-        // Return empty if token not found or is expired
-        if (verificationToken.isEmpty() || verificationToken.get().isExpired())
-            return Optional.empty();
-
-        return verificationToken;
+    public Optional<VerificationToken> validateToken(String token, TokenTypes expectedType) {
+        return verificationTokenRepository.findByToken(token)
+                // Condition 1: The token must not be exipred
+                .filter(verificationToken -> verificationToken.getExpiryDate().isAfter(LocalDateTime.now()))
+                // Condition 2: The token must match the expected type
+                .filter(verificationToken -> verificationToken.getTokenTypes() == expectedType);
     }
 
 

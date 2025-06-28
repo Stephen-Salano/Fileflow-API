@@ -22,7 +22,7 @@ public interface VerificationTokenService {
      * @param token the token string to validate
      * @return the verification token if valid, empty if not found or expired
      */
-    Optional<VerificationToken> validateToken(String token);
+    Optional<VerificationToken> validateToken(String token, TokenTypes expectedType);
 
     /**
      * Invalidates all tokens of a specific type for an account
