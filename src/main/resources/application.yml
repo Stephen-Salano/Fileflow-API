@@ -51,3 +51,18 @@ app:
   verification-token:
     expiration-minutes: 15 # token expires after 15 minutes
     token-length: 32 # length of the random bytes used for token generation
+
+# Actuator endpoints enabling
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: ${project.version:0.0.1-SNAPSHOT}
+    description: "Fileflow secure media management API"
+  author:
+    name: "Stephen Salano"
