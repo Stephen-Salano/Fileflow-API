@@ -9,7 +9,10 @@ package com.stephensalano.fileflow_api.dto.security;
 public record SecurityContext(
         String fingerprintHash,
         String userAgent,
-        String ipAddress
+        String ipAddress,
+        String browser,
+        String os,
+        String deviceType
 
         /// TODO: Optional later we could expand this to include: Device type, Geo info, Language or timezone
         ) {}

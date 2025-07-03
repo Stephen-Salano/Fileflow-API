@@ -6,5 +6,6 @@ import jakarta.validation.Valid;
 
 
 public interface UserService {
+
     void changePassword(Account authenticatedAccount, @Valid ChangePasswordRequest changePasswordRequest);
 }

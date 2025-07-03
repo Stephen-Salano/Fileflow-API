@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 public class DeviceFingerprintServiceImpl implements DeviceFingerprintService{
 
     private final DeviceFingerPrintRepository repository;
-    private final Parser parser = new Parser(); // the ua parser instance
+    private final Parser parser; // the ua parser instance
 
     /**
      * Asynchronously update or register a fingerprint
