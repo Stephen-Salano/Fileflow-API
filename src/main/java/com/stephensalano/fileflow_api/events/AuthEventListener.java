@@ -50,4 +50,11 @@ public class AuthEventListener {
         log.info("Listener handling password reset success for user: {}", event.getUsername());
         emailService.sendPasswordResetSuccessEmail(event.getEmail(), event.getUsername());
     }
+
+    @Async("emailTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handlePasswordChange(OnPasswordChangeEvent event){
+        log.info("Listener handling password change for user: {}", event.getUsername());
+        emailService.sendPasswordResetSuccessEmail(event.getEmail(), event.getUsername());
+    }
 }

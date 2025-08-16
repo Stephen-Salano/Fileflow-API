@@ -12,6 +12,9 @@ package com.stephensalano.fileflow_api.dto.requests;
 public record DeviceFingerprintRequest(
         String fingerprintHash,
         String userAgent,
-        String ipAddress
+        String ipAddress,
+        String browser,
+        String os,
+        String deviceType
 ) {
 }

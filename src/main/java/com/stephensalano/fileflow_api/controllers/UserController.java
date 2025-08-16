@@ -24,7 +24,7 @@ public class UserController {
     private final UserService userService;
 
     @PutMapping("/me/change-password")
-    private ResponseEntity<Map<String, Object>> changePassword(
+    public ResponseEntity<Map<String, Object>> changePassword(
             @Valid @RequestBody ChangePasswordRequest changePasswordRequest,
             Authentication authentication
             ) {

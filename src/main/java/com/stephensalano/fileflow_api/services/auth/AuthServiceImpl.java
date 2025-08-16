@@ -30,6 +30,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ua_parser.Client;
+import ua_parser.Parser;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -53,6 +55,7 @@ public class AuthServiceImpl  implements AuthService{
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenRepository refreshTokenRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final Parser uaParser;
 
     @Override
     @Transactional
@@ -364,15 +367,23 @@ public class AuthServiceImpl  implements AuthService{
         if (fingerprintHash != null && !fingerprintHash.isBlank()) {
             String userAgent = request.getHeader("User-Agent");
             String ipAddress = SecurityUtils.extractClientIp(request);
+            Client c = uaParser.parse(userAgent);
+            String browser = c.userAgent.family;
+            String os = c.os.family;
+            String deviceType = c.device.family;
+
 
             SecurityContext securityContext = new SecurityContext(
-                    fingerprintHash, userAgent, ipAddress
+                    fingerprintHash, userAgent, ipAddress, browser, os, deviceType
             );
 
             DeviceFingerprintRequest fingerprintRequest = new DeviceFingerprintRequest(
                     securityContext.fingerprintHash(),
                     securityContext.userAgent(),
-                    securityContext.ipAddress()
+                    securityContext.ipAddress(),
+                    securityContext.browser(),
+                    securityContext.os(),
+                    securityContext.deviceType()
             );
 
             deviceFingerprintService.registerFingerprint(account, fingerprintRequest)
