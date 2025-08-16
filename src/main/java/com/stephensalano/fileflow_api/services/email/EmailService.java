@@ -1,5 +1,7 @@
 package com.stephensalano.fileflow_api.services.email;
 
+import com.stephensalano.fileflow_api.dto.security.SecurityContext;
+
 /**
  * Service responsible for sending emails to user
  */
@@ -30,4 +32,13 @@ public interface EmailService {
      * @param username The recipients username
      */
     void sendPasswordResetSuccessEmail(String to, String username);
+
+    /**
+     * Sends a security alert email notifying a user that their password has been changed from a logged-in session.
+     *
+     * @param to              The recipient's email address.
+     * @param username        The recipient's username.
+     * @param securityContext Contextual information about the request (IP, browser, etc.).
+     */
+    void sendPasswordChangedSecurityAlert(String to, String username, SecurityContext securityContext);
 }

@@ -55,6 +55,6 @@ public class AuthEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handlePasswordChange(OnPasswordChangeEvent event){
         log.info("Listener handling password change for user: {}", event.getUsername());
-        emailService.sendPasswordResetSuccessEmail(event.getEmail(), event.getUsername());
+        emailService.sendPasswordChangedSecurityAlert(event.getEmail(), event.getUsername(), event.getSecurityContext());
     }
 }

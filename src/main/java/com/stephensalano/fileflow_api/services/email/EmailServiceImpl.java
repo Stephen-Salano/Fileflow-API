@@ -1,5 +1,6 @@
 package com.stephensalano.fileflow_api.services.email;
 
+import com.stephensalano.fileflow_api.dto.security.SecurityContext;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /***
  * Implementation of the EmailService Interface
@@ -25,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 @Slf4j
 public class EmailServiceImpl implements EmailService{
+
 
     private final JavaMailSender mailSender;
 
@@ -154,6 +158,34 @@ public class EmailServiceImpl implements EmailService{
             log.info("Password reset confirmation email sent to: {}", to);
         } catch (MessagingException e) {
             log.error("Failed to send password reset confirmation email to {}: {}", to, e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendPasswordChangedSecurityAlert(String to, String username, SecurityContext securityContext) {
+        try {
+            // The reset URL is included in case the user did NOT make this change
+            String resetUrl = frontendUrl + "/forgot-password";
+
+            Context context = new Context();
+            context.setVariable("name", username);
+            context.setVariable("appName", appName);
+            context.setVariable("securityContext", securityContext);
+            context.setVariable("resetUrl", resetUrl);
+            context.setVariable("changeTime", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'")));
+
+            String emailContent = templateEngine.process("password-changed-alert-email", context);
+
+            MimeMessage message = createMimeMessage(
+                    to,
+                    "Security Alert: Your " + appName + " Password Was Changed",
+                    emailContent
+            );
+            mailSender.send(message);
+            log.info("Password change security alert sent to: {}", to);
+        } catch (MessagingException e) {
+            log.error("Failed to send password change security alert to {}: {}", to, e.getMessage(), e);
         }
     }
 

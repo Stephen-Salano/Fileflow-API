@@ -21,12 +21,14 @@ spring:
       settings:
         web-allow-others: true
 
-  # Email configurations
+  # Email configurations for testing (Mailtrap).
+  # These values are self-contained for local dev but can be overridden by environment variables.
   mail:
-    host: ${TEST_MAIL_HOST}
-    port: ${TEST_MAIL_PORT}
-    username: ${TEST_MAIL_USERNAME}
-    password: ${TEST_MAIL_PASSWORD}
+    host: ${TEST_MAIL_HOST:sandbox.smtp.mailtrap.io}
+    port: ${TEST_MAIL_PORT:2525}
+    username: ${TEST_MAIL_USERNAME} # Your Mailtrap username from env vars
+    password: ${TEST_MAIL_PASSWORD} # Your Mailtrap password from env vars
+
 
 # Test-specific Logging
 logging:

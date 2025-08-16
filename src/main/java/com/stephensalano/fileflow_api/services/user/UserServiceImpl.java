@@ -9,6 +9,7 @@ import com.stephensalano.fileflow_api.repository.AccountRepository;
 import com.stephensalano.fileflow_api.utils.SecurityUtils;
 import com.stephensalano.fileflow_api.utils.ValidationUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,6 +33,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @Transactional
     public void changePassword(Account authenticatedAccount, ChangePasswordRequest changePasswordRequest) {
 
         // verify the current password
