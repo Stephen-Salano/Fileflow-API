@@ -55,6 +55,9 @@ public class Account implements UserDetails {
     @Column(name = "anonymized", nullable = false)
     private boolean anonymized = false;
 
+    @Column(name = "failedLoginAttempts", nullable = false)
+    private int failedLoginAttempts = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

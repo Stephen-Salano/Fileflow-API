@@ -66,3 +66,7 @@ info:
     description: "Fileflow secure media management API"
   author:
     name: "Stephen Salano"
+
+login:
+  app:
+    threshold: 5

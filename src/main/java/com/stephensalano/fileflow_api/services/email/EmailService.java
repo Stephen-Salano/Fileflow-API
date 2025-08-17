@@ -41,4 +41,12 @@ public interface EmailService {
      * @param securityContext Contextual information about the request (IP, browser, etc.).
      */
     void sendPasswordChangedSecurityAlert(String to, String username, SecurityContext securityContext);
+
+    /**
+     *  This method will send an Lockout email to the user
+     * @param to the affected user
+     * @param username recipients username
+     * @param securityContext  contexual info about the request (IP, browser, etc.)
+     */
+    void sendAccountLockoutEmail(String to, String username, SecurityContext securityContext);
 }

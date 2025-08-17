@@ -189,6 +189,34 @@ public class EmailServiceImpl implements EmailService{
         }
     }
 
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendAccountLockoutEmail(String to, String username, SecurityContext securityContext) {
+
+        try {
+            // The reset URL
+            String resetUrl = frontendUrl + "/forgot-password";
+
+            Context context = new Context();
+            context.setVariable("name", username);
+            context.setVariable("appName", appName);
+            context.setVariable("securityContext", securityContext);
+            context.setVariable("resetUrl", resetUrl);
+            context.setVariable("lockoutTime", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'")));
+
+            String emailContent = templateEngine.process("account-lockout-email", context);
+            MimeMessage message = createMimeMessage(
+                    to,
+                    "Security Alert: Your " + appName + " Account Has Been Locked",
+                    emailContent
+            );
+            mailSender.send(message);
+            log.info("Account lockout email sent to: {}", to);
+        } catch (MessagingException e) {
+            log.error("Failed to send account lockout email to {}: {}", to, e.getMessage(), e);
+        }
+    }
+
     // Helper method for message creation
     private MimeMessage createMimeMessage(String to, String subject, String emailContent) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();

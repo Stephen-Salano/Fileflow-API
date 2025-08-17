@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -60,6 +61,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             } catch (JwtException e) {
                 log.warn("Invalid JWT token received: {}. Details: {}", jwtService.getTokenMetadata(token), e.getMessage());
                 sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
+            } catch (LockedException e){
+                log.warn("Authentication attempt for a locked/disabled account: {}", e.getMessage());
+                sendError(response, HttpServletResponse.SC_FORBIDDEN, e.getMessage());
             } catch (Exception e) {
                 log.error("An unexpected error occurred during JWT processing for user.", e);
                 sendError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Authentication processing error");
@@ -99,6 +103,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
             return false;
         }
+
+        validateAccountStatus(userDetails);
 
         Claims claims = jwtService.extractAllClaims(token);
 
@@ -227,5 +233,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || path.startsWith("/api/v1/auth/login")
                 || path.startsWith("/h2-console")
                 || path.startsWith("/actuator");
+    }
+
+    /**
+     * Centralized method to check the status of the user account based on the Userdetails contract
+     * This ensures that even with a Valid JWT, a user who has been disabled, locked, or whose credentials have expired
+     * cannot proceed
+     *
+     * @param userDetails The user details loaded from the database for the current request.
+     * @throws LockedException if the account is locked, disabled, or expired
+     */
+    private void validateAccountStatus(UserDetails userDetails){
+        if (!userDetails.isAccountNonLocked()){
+            throw new LockedException("Account is locked");
+        }
+        if (!userDetails.isEnabled()){
+            throw new LockedException("Account is disabled");
+        }
     }
 }
