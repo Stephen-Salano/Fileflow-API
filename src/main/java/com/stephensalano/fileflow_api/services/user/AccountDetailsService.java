@@ -4,6 +4,7 @@ import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -20,6 +21,7 @@ public class AccountDetailsService implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "users", key = "#usernameOrEmail")
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
         log.debug("Loading user details for: {}", usernameOrEmail);
 

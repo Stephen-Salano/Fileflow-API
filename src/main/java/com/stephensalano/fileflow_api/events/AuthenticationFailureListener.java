@@ -6,6 +6,7 @@ import com.stephensalano.fileflow_api.repository.AccountRepository;
 import com.stephensalano.fileflow_api.utils.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,6 +33,7 @@ public class AuthenticationFailureListener {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @EventListener
+    @CacheEvict(value = "users", key = "#event.authentication.name")
     public void handleAuthFailureBadCredentials(AuthenticationFailureBadCredentialsEvent event) {
         String username = event.getAuthentication().getName();
         accountRepository.findByUsername(username).ifPresent(account -> {

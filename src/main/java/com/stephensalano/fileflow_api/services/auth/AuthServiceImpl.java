@@ -22,6 +22,8 @@ import com.stephensalano.fileflow_api.utils.ValidationUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -56,6 +58,7 @@ public class AuthServiceImpl  implements AuthService{
     private final RefreshTokenRepository refreshTokenRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final Parser uaParser;
+    private final CacheManager cacheManager;
 
     @Override
     @Transactional
@@ -323,7 +326,7 @@ public class AuthServiceImpl  implements AuthService{
 
         return AuthResponse.of(
                 newAccessToken, newRefreshToken,
-                jwtService.getAccessTokenExpiration() / 100,
+                jwtService.getAccessTokenExpiration() / 1000, // Converted to seconds
                 account.getUsername(), account.getEmail(),
                 account.getRole().name()
         );
@@ -432,6 +435,10 @@ public class AuthServiceImpl  implements AuthService{
 
         Account account = verificationToken.getAccount();
 
+        // Evict user from cache before saving changes to ensure fresh data on next login
+        evictUserFromCache(account.getUsername());
+        evictUserFromCache(account.getEmail());
+
         // Set the new password
         account.setPassword(passwordEncoder.encode(request.newPassword()));
         account.setAccountNonLocked(true);
@@ -452,5 +459,12 @@ public class AuthServiceImpl  implements AuthService{
                 account.getUsername()
         ));
         log.info("Password reset successful for user: {}", account.getUsername());
+    }
+
+    private void evictUserFromCache(String key) {
+        Cache usersCache = cacheManager.getCache("users");
+        if (usersCache != null) {
+            usersCache.evictIfPresent(key);
+        }
     }
 }

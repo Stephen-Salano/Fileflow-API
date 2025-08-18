@@ -2,6 +2,7 @@ package com.stephensalano.fileflow_api.events;
 
 import com.stephensalano.fileflow_api.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
@@ -17,6 +18,7 @@ public class AuthenticationSuccessListener {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @EventListener
+    @CacheEvict(value = "users", key = "#event.authentication.name")
     public void handleAuthenticationSuccess(AuthenticationSuccessEvent event) {
         String username = event.getAuthentication().getName();
         accountRepository.findByUsername(username).ifPresent(account -> {

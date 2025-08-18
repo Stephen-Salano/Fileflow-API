@@ -8,13 +8,15 @@ import com.stephensalano.fileflow_api.events.OnPasswordChangeEvent;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
 import com.stephensalano.fileflow_api.utils.SecurityUtils;
 import com.stephensalano.fileflow_api.utils.ValidationUtils;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import jakarta.servlet.http.HttpServletRequest;
 import ua_parser.Client;
 import ua_parser.Parser;
 
@@ -34,11 +36,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "users", key = "#authenticatedAccount.username"),
+            @CacheEvict(value = "users", key = "#authenticatedAccount.email")
+    })
     public void changePassword(Account authenticatedAccount, ChangePasswordRequest changePasswordRequest) {
 
         // verify the current password
         if (!passwordEncoder.matches(changePasswordRequest.currentPassword(), authenticatedAccount.getPassword())) {
-            throw new IllegalArgumentException("Current password cannot match original");
+            throw new IllegalArgumentException("Incorrect current password");
         }
         // Validate the new passwords match
         ValidationUtils.validatePasswordsMatch(changePasswordRequest.newPassword(), changePasswordRequest.confirmPassword());
