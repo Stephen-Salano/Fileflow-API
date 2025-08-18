@@ -434,7 +434,9 @@ public class AuthServiceImpl  implements AuthService{
 
         // Set the new password
         account.setPassword(passwordEncoder.encode(request.newPassword()));
-        accountRepository.saveAndFlush(account);
+        account.setAccountNonLocked(true);
+        account.setFailedLoginAttempts(0);
+        accountRepository.save(account);
 
         // Invalidate all refresh tokens for this user security
         refreshTokenRepository.invalidateAllByAccount(account);
