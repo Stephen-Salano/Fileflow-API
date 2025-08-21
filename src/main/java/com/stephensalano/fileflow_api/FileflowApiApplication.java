@@ -19,7 +19,7 @@ public class FileflowApiApplication {
 		Environment environment = app.run(args).getEnvironment();
 
 		String activeProfiles = String.join(", ", environment.getActiveProfiles());
-		logger.info("Application is running ith profiles: {}", activeProfiles);
+		logger.info("Application is running with profiles: {}", activeProfiles);
 	}
 
 }

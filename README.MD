@@ -46,7 +46,7 @@ A modern Spring Boot application for secure media upload, processing, and social
 
 ### Backend
 - Java 21
-- Spring Boot 3.4.5
+- Spring Boot 3.3.0
 - Spring Security with JWT
 - Spring Data JPA
 - PostgreSQL (production)
