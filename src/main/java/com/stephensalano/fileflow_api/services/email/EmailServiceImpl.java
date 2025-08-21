@@ -48,26 +48,10 @@ public class EmailServiceImpl implements EmailService{
     @Async("emailTaskExecutor")
     public void sendVerificationEmail(String to, String username, String token) {
         try{
-            // prepare verification link(URL) with token
-            Context context = getContext(username, token);
-
-            /*
-            Thymeleaf loads your verification-email.html file, replaces the placeholders with the values from context
-            and returns a complete HTML string
-             */
+            Context context = createBaseContext(username);
+            context.setVariable("verificationUrl", frontendUrl + "/verify?token=" + token);
             String emailContent = templateEngine.process("verification-email", context);
-
-            // Create and send the email
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(
-                    message, true, StandardCharsets.UTF_8.name()
-            );
-
-            helper.setFrom(fromEmail); // the "no-reply" address or support address
-            helper.setTo(to); // the recipient's email
-            helper.setSubject(appName + " - Verify your Email"); // a clear, branded subject line
-            helper.setText(emailContent, true); // true indicates HTML content
-
+            MimeMessage message = createMimeMessage(to, appName + " - Verify your Email", emailContent);
             mailSender.send(message);
             log.info("Verification email sent to: {}", to);
         } catch (MessagingException e){
@@ -75,45 +59,16 @@ public class EmailServiceImpl implements EmailService{
         }
     }
 
-    private Context getContext(String username, String token) {
-        String verificationUrl = frontendUrl + "/verify?token=" + token;
-
-        // Set up the Thymeleaf context with a few variables for the template
-            /*
-            We are using Thymeleaf's context to pass three values into our HTML template
-            - This is how Thymeleaf knows what to fill in
-             */
-        Context context = new Context();
-        context.setVariable("name", username); // so we can say something like "Hi Alice"
-        context.setVariable("verificationUrl", verificationUrl); // The link we generated
-        context.setVariable("appName", appName); // to brand the email
-        return context;
-    }
-
     @Override
     @Async("emailTaskExecutor")
     public void sendWelcomeEmail(String to, String username) {
         try{
-            // Set up the Thymeleaf context with variables for the template
-            Context context = new Context();
-            context.setVariable("name", username);
+            Context context = createBaseContext(username);
             context.setVariable("loginUrl", frontendUrl + "/login");
-            context.setVariable("appName", appName);
 
             // Process the HTML template with the context
             String emailContent = templateEngine.process("welcome-email", context);
-
-            // Create and send the email
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(
-                    message, true, StandardCharsets.UTF_8.name()
-            );
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Welcome to " + appName + "!");
-            helper.setText(emailContent, true); // true indicates HTML content
-
+            MimeMessage message = createMimeMessage(to, "Welcome to " + appName + "!", emailContent);
             mailSender.send(message);
             log.info("Welcome email sent to: {}", to);
         } catch (MessagingException e){
@@ -126,11 +81,8 @@ public class EmailServiceImpl implements EmailService{
     public void sendPasswordResetEmail(String to, String username, String token) {
         try {
             String resetUrl = frontendUrl + "/reset-password?token=" + token;
-
-            Context context = new Context();
-            context.setVariable("name", username);
+            Context context = createBaseContext(username);
             context.setVariable("resetUrl", resetUrl);
-            context.setVariable("appName", appName);
 
             String emailContent = templateEngine.process("password-reset-email", context);
             MimeMessage message = createMimeMessage(to, appName + " - Password Reset Request", emailContent);
@@ -146,11 +98,8 @@ public class EmailServiceImpl implements EmailService{
     public void sendPasswordResetSuccessEmail(String to, String username) {
 
         try {
-            Context context = new Context();
-            context.setVariable("name", username);
+            Context context = createBaseContext(username);
             context.setVariable("loginUrl", frontendUrl + "/login");
-            context.setVariable("appName", appName);
-
             String emailContent = templateEngine.process("password-reset-success-email", context);
 
             MimeMessage message = createMimeMessage(to, appName+ " - Your password has been reset", emailContent);
@@ -168,9 +117,7 @@ public class EmailServiceImpl implements EmailService{
             // The reset URL is included in case the user did NOT make this change
             String resetUrl = frontendUrl + "/forgot-password";
 
-            Context context = new Context();
-            context.setVariable("name", username);
-            context.setVariable("appName", appName);
+            Context context = createBaseContext(username);
             context.setVariable("securityContext", securityContext);
             context.setVariable("resetUrl", resetUrl);
             context.setVariable("changeTime", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'")));
@@ -197,9 +144,7 @@ public class EmailServiceImpl implements EmailService{
             // The reset URL
             String resetUrl = frontendUrl + "/forgot-password";
 
-            Context context = new Context();
-            context.setVariable("name", username);
-            context.setVariable("appName", appName);
+            Context context = createBaseContext(username);
             context.setVariable("securityContext", securityContext);
             context.setVariable("resetUrl", resetUrl);
             context.setVariable("lockoutTime", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'")));
@@ -228,5 +173,12 @@ public class EmailServiceImpl implements EmailService{
         helper.setSubject(subject);
         helper.setText(emailContent, true);
         return message;
+    }
+
+    private Context createBaseContext(String username) {
+        Context context = new Context();
+        context.setVariable("name", username);
+        context.setVariable("appName", appName);
+        return context;
     }
 }

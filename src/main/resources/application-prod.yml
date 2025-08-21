@@ -18,6 +18,10 @@ spring:
     username: ${TEST_MAIL_USERNAME}
     password: ${TEST_MAIL_PASSWORD}
 
+# Disable OpenAPI/Swagger in production for security
+springdoc:
+  api-docs:
+    enabled: false
 # Production logging (minimal)
 logging:
   level:

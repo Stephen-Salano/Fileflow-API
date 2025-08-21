@@ -88,7 +88,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
-			<version>3.4.5</version>
 		</dependency>
 
 		<!-- JWT Support -->
@@ -135,6 +134,20 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-redis-common</artifactId>
+            <version>8.14.0</version>
+        </dependency>
+
+        <!-- Bucket4j Lettuce (Redis) -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk11-lettuce</artifactId>
+            <version>8.14.0</version>
+        </dependency>
+
 
 
     </dependencies>
