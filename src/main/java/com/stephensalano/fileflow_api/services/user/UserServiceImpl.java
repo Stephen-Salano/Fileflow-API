@@ -2,14 +2,17 @@ package com.stephensalano.fileflow_api.services.user;
 
 import com.stephensalano.fileflow_api.configs.security.JwtService;
 import com.stephensalano.fileflow_api.dto.requests.ChangePasswordRequest;
+import com.stephensalano.fileflow_api.dto.responses.UserProfileResponse;
 import com.stephensalano.fileflow_api.dto.security.SecurityContext;
 import com.stephensalano.fileflow_api.entities.Account;
+import com.stephensalano.fileflow_api.entities.User;
 import com.stephensalano.fileflow_api.events.OnPasswordChangeEvent;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
 import com.stephensalano.fileflow_api.utils.SecurityUtils;
 import com.stephensalano.fileflow_api.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -95,6 +98,28 @@ public class UserServiceImpl implements UserService {
                 )
         );
         log.info("Published OnPasswordChangedEvent for user: {}", account.getUsername());
+    }
+
+    @Cacheable(value = "user-profiles", key = "#authenticatedAccount.username")
+    @Override
+    public UserProfileResponse getUserProfile(Account authenticatedAccount) {
+        // Getting the user details from the account object
+        User authenticatedUser = authenticatedAccount.getUser();
+
+        // Handling nul profile image by creating a url if it exists
+        String profileImageUrl = (authenticatedUser.getProfileImage() != null)
+                ? "/api/v1/media/file/" + authenticatedUser.getProfileImage().getId() : null;
+        return new UserProfileResponse(
+                authenticatedAccount.getUsername(),
+                authenticatedAccount.getEmail(),
+                authenticatedAccount.getRole().name(),
+                authenticatedUser.getFirstName(),
+                authenticatedUser.getSecondName(),
+                authenticatedUser.getBio(),
+                profileImageUrl,
+                authenticatedAccount.getCreatedAt()
+        );
+
     }
 
     private String extractFingerprintHash() {

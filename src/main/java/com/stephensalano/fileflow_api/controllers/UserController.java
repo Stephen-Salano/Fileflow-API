@@ -1,6 +1,7 @@
 package com.stephensalano.fileflow_api.controllers;
 
 import com.stephensalano.fileflow_api.dto.requests.ChangePasswordRequest;
+import com.stephensalano.fileflow_api.dto.responses.UserProfileResponse;
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.services.user.UserService;
 import jakarta.validation.Valid;
@@ -8,10 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -42,5 +40,16 @@ public class UserController {
                 "message", "Password changed successfully"
         ));
     }
+    @GetMapping("/me")
+    public ResponseEntity<UserProfileResponse> getCurrentUserDetails(
+            Authentication authentication
+    ){
+        log.info("Getting current user details attempt for user: {}", authentication.getName());
+        Account authenticatedAccount = (Account)  authentication.getPrincipal();
+        UserProfileResponse userProfile = userService.getUserProfile(authenticatedAccount);
+        log.info("Current user details successfull for user: {}", authentication.getName());
+        return ResponseEntity.ok(userProfile);
+
+        }
 
 }

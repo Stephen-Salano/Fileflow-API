@@ -210,11 +210,16 @@ public class AuthServiceImpl  implements AuthService{
                     )
             );
 
-            // Get the authenticated account
-            Account account = (Account) authentication.getPrincipal();
+            // Get the authenticated account principal
+            Account principalAccount = (Account) authentication.getPrincipal();
+
+            // Re-fetch the account to ensure it's a managed entity in the current transaction.
+            // This prevents issues with detached entities caused by other transactional listeners (e.g., AuthenticationSuccessListener).
+            Account account = accountRepository.findByUsername(principalAccount.getUsername())
+                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found in database post-authentication"));
 
             // Check if account is enabled
-            if (!account.isEnabled()){
+            if (!account.isEnabled()) {
                 throw new IllegalStateException("Account not verified. Please check your email for the verification link");
             }
 
@@ -341,12 +346,8 @@ public class AuthServiceImpl  implements AuthService{
      * @param refreshToken the refreshToken to be saved
      */
     private void saveRefreshToken(Account account, String refreshToken) {
-        // Remove existing refresh Token
-        refreshTokenRepository.findByAccount(account)
-                .ifPresent(existingToken -> {
-                    existingToken.setInvalidated(true);
-                    refreshTokenRepository.save(existingToken);
-                });
+        // Invalidate all previous refresh tokens for this user for enhanced security.
+        refreshTokenRepository.invalidateAllByAccount(account);
 
         // create a new refreshToken
         RefreshToken newRefreshToken = new RefreshToken();

@@ -1,5 +1,6 @@
 package com.stephensalano.fileflow_api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -75,9 +76,35 @@ public class Account implements UserDetails {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * When Redis tries to save this Account Object, it turns it into JSON text.
+     * When it tires to read that JSON text back to rebuild the Account Object, it sees that authorities
+     * data but doesn't know where to put it becuase there is no corresponding `setAuthorities()` method
+     *
+     * Therefore we use the `JsonIgnore` annotation to the getAuthorities method
+     * @return Collection of authorities
+     */
     @Override
+    @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(this.role.name()));
+    }
+
+    /**
+     * These methods are part of the UserDetails contract but are not backed by fields in this entity.
+     * They are ignored during JSON serialization to prevent issues with caching mechanisms like Redis,
+     * which might otherwise fail when trying to deserialize the object.
+     */
+    @Override
+    @JsonIgnore
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isCredentialsNonExpired() {
+        return true;
     }
 
 }
