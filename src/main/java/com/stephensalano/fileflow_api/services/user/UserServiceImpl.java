@@ -2,12 +2,15 @@ package com.stephensalano.fileflow_api.services.user;
 
 import com.stephensalano.fileflow_api.configs.security.JwtService;
 import com.stephensalano.fileflow_api.dto.requests.ChangePasswordRequest;
+import com.stephensalano.fileflow_api.dto.requests.DeleteAccountRequest;
 import com.stephensalano.fileflow_api.dto.responses.UserProfileResponse;
 import com.stephensalano.fileflow_api.dto.security.SecurityContext;
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.entities.User;
+import com.stephensalano.fileflow_api.events.OnAccountAnonymizedEvent;
 import com.stephensalano.fileflow_api.events.OnPasswordChangeEvent;
 import com.stephensalano.fileflow_api.repository.AccountRepository;
+import com.stephensalano.fileflow_api.repository.RefreshTokenRepository;
 import com.stephensalano.fileflow_api.utils.SecurityUtils;
 import com.stephensalano.fileflow_api.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +38,7 @@ public class UserServiceImpl implements UserService {
     private final JwtService jwtService;
     private final ApplicationEventPublisher eventPublisher;
     private final Parser uaParser;
+    private final RefreshTokenRepository refreshTokenRepository;
 
 
     @Override
@@ -120,6 +124,43 @@ public class UserServiceImpl implements UserService {
                 authenticatedAccount.getCreatedAt()
         );
 
+    }
+
+    /**
+     * Main anonymization logic
+     * @param authenticatedAccount the account to anonymize
+     * @param request the request containing the password for verification
+     */
+    @Override
+    @Transactional
+    @Cacheable(value = "users", key = "#authenticatedAccount.username")
+    // Removing users from the "users" and "user-profiles" caches
+    @Caching(evict = {
+            @CacheEvict(value = "users", key = "#authenticatedAccount.username"),
+            @CacheEvict(value = "users", key = "#authenticatedAccount.email")
+    })
+    public void anonymizeAccount(Account authenticatedAccount, DeleteAccountRequest request) {
+        // verify the current password
+        if (!passwordEncoder.matches(request.password(), authenticatedAccount.getPassword())) {
+            throw new IllegalArgumentException("Incorrect current password");
+        }
+        // Getting the user object
+        User authenticatedUser = authenticatedAccount.getUser();
+        // Calling the `anonymize()` function that sets all user data to null and sets the anonymized flag on
+        authenticatedUser.anonymize();
+        // persisting changes (saving the account should cascade the changes to the user due to the relationship)
+        accountRepository.save(authenticatedAccount);
+        //invalidate the session
+        refreshTokenRepository.invalidateAllByAccount(authenticatedAccount);
+        // Publishing event
+        eventPublisher.publishEvent(
+                new OnAccountAnonymizedEvent(
+                        this,
+                        authenticatedAccount.getEmail(),
+                        authenticatedAccount.getUsername()
+                )
+        );
+        log.info("Anonymized account for user: {}", authenticatedAccount.getUsername());
     }
 
     private String extractFingerprintHash() {
