@@ -14,6 +14,8 @@ import com.stephensalano.fileflow_api.repository.RefreshTokenRepository;
 import com.stephensalano.fileflow_api.utils.SecurityUtils;
 import com.stephensalano.fileflow_api.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
+import org.hibernate.SessionFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -39,13 +41,15 @@ public class UserServiceImpl implements UserService {
     private final ApplicationEventPublisher eventPublisher;
     private final Parser uaParser;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final SessionFactory sessionFactory;
 
 
     @Override
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "users", key = "#authenticatedAccount.username"),
-            @CacheEvict(value = "users", key = "#authenticatedAccount.email")
+            @CacheEvict(value = "users", key = "#authenticatedAccount.email"),
+            @CacheEvict(value = "user-profiles", key = "#authenticatedAccount.username")
     })
     public void changePassword(Account authenticatedAccount, ChangePasswordRequest changePasswordRequest) {
 
@@ -113,15 +117,16 @@ public class UserServiceImpl implements UserService {
         // Handling nul profile image by creating a url if it exists
         String profileImageUrl = (authenticatedUser.getProfileImage() != null)
                 ? "/api/v1/media/file/" + authenticatedUser.getProfileImage().getId() : null;
-        return new UserProfileResponse(
+        return new UserProfileResponse( // Corrected constructor arguments
+                authenticatedAccount.getId(), // Added missing ID
                 authenticatedAccount.getUsername(),
                 authenticatedAccount.getEmail(),
-                authenticatedAccount.getRole().name(),
                 authenticatedUser.getFirstName(),
                 authenticatedUser.getSecondName(),
                 authenticatedUser.getBio(),
                 profileImageUrl,
-                authenticatedAccount.getCreatedAt()
+                authenticatedAccount.getRole().name(), // Correct position for role
+                authenticatedAccount.getCreatedAt() // Correct position for createdAt
         );
 
     }
@@ -133,34 +138,42 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     @Transactional
-    @Cacheable(value = "users", key = "#authenticatedAccount.username")
-    // Removing users from the "users" and "user-profiles" caches
     @Caching(evict = {
             @CacheEvict(value = "users", key = "#authenticatedAccount.username"),
-            @CacheEvict(value = "users", key = "#authenticatedAccount.email")
+            @CacheEvict(value = "users", key = "#authenticatedAccount.email"),
+            @CacheEvict(value = "user-profiles", key = "#authenticatedAccount.username")
     })
     public void anonymizeAccount(Account authenticatedAccount, DeleteAccountRequest request) {
-        // verify the current password
-        if (!passwordEncoder.matches(request.password(), authenticatedAccount.getPassword())) {
+        // Re-fetch the account from the database to ensure we have a fully managed entity.
+        // This avoids any issues with detached optionally loaded entities from the cache.
+        Account accountToAnonymize = accountRepository.findById(authenticatedAccount.getId())
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found in database during anonymization."));
+
+        // verify the current password from the request matches the one in the database
+        if (!passwordEncoder.matches(request.password(), accountToAnonymize.getPassword())) {
             throw new IllegalArgumentException("Incorrect current password");
         }
         // Getting the user object
-        User authenticatedUser = authenticatedAccount.getUser();
-        // Calling the `anonymize()` function that sets all user data to null and sets the anonymized flag on
-        authenticatedUser.anonymize();
-        // persisting changes (saving the account should cascade the changes to the user due to the relationship)
-        accountRepository.save(authenticatedAccount);
-        //invalidate the session
-        refreshTokenRepository.invalidateAllByAccount(authenticatedAccount);
-        // Publishing event
+        User userToAnonymize = accountToAnonymize.getUser();
+
+        // Ensuring the accounts collection is loaded while session is open
+        Hibernate.initialize(userToAnonymize.getAccounts());
+
+        // calling the anonymize function that sets all user data to null and sets the anonymized flag on
+        userToAnonymize.anonymize();
+        // persisting changes
+        accountRepository.save(accountToAnonymize);
+        // Invalidate the session
+        refreshTokenRepository.invalidateAllByAccount(accountToAnonymize);
+        // event publishing
         eventPublisher.publishEvent(
                 new OnAccountAnonymizedEvent(
                         this,
-                        authenticatedAccount.getEmail(),
-                        authenticatedAccount.getUsername()
+                        accountToAnonymize.getEmail(),
+                        accountToAnonymize.getUsername()
                 )
         );
-        log.info("Anonymized account for user: {}", authenticatedAccount.getUsername());
+        log.info("Anonymized account for user: {}", accountToAnonymize.getUsername());
     }
 
     private String extractFingerprintHash() {

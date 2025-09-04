@@ -1,17 +1,10 @@
 package com.stephensalano.fileflow_api.entities;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Builder
 @NoArgsConstructor
@@ -35,15 +28,15 @@ public class User {
     @Column(name = "bio")
     private String bio;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @ManyToOne(fetch = FetchType.EAGER, optional = true)
     @JoinColumn(name = "profile_image_id")
     private Media profileImage;
 
     @OneToMany(
             mappedBy = "user",
             cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.DETACH},
-            orphanRemoval = false,
-            fetch = FetchType.LAZY
+            orphanRemoval = false, // We don't want to delete accounts when a user is deleted
+            fetch = FetchType.LAZY // Eagerly fetch accounts to prevent LazyInitializationException
     )
     private List<Account> accounts = new ArrayList<>();
 

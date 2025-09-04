@@ -1,6 +1,7 @@
 package com.stephensalano.fileflow_api.controllers;
 
 import com.stephensalano.fileflow_api.dto.requests.ChangePasswordRequest;
+import com.stephensalano.fileflow_api.dto.requests.DeleteAccountRequest;
 import com.stephensalano.fileflow_api.dto.responses.UserProfileResponse;
 import com.stephensalano.fileflow_api.entities.Account;
 import com.stephensalano.fileflow_api.services.user.UserService;
@@ -50,6 +51,26 @@ public class UserController {
         log.info("Current user details successfull for user: {}", authentication.getName());
         return ResponseEntity.ok(userProfile);
 
-        }
+    }
 
+
+    @DeleteMapping("/me")
+    public ResponseEntity<Map<String, Object>> anonymizeAccount(
+            @Valid @RequestBody DeleteAccountRequest request,
+            Authentication authentication
+            ){
+        log.info("Delete Account Attempt For user: {}", authentication.getName());
+        // Getting the authenticated account from the Authentication principal
+        Account authenticatedAccount = (Account) authentication.getPrincipal();
+        // Service call
+        userService.anonymizeAccount(authenticatedAccount, request);
+        log.info("Anonymized user details successfull for user: {}", authentication.getName());
+        // Return message
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Account anonymized successfully"
+                )
+        );
+
+    }
 }

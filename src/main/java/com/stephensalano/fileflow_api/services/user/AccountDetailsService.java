@@ -32,6 +32,13 @@ public class AccountDetailsService implements UserDetailsService {
                                 "user not found with username or email: " + usernameOrEmail
                         )));
 
+        // *** THE FIX ***
+        // Force initialization of the lazy collection while the session is still active.
+        // This replaces the Hibernate proxy with a real collection before it's passed to the cache.
+        if (account.getUser() != null && account.getUser().getAccounts() != null) {
+            account.getUser().getAccounts().size(); // Accessing the collection forces initialization
+        }
+
         log.debug("User found: {}", account.getUsername());
         return account;
     }

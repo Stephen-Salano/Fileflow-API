@@ -64,4 +64,13 @@ public class AuthEventListener {
         log.info("Listener handling account lockout for user: {}", event.getUsername());
         emailService.sendAccountLockoutEmail(event.getEmail(), event.getUsername(), event.getSecurityContext());
     }
+
+    @Async("emailTaskExecutor")
+    @TransactionalEventListener (phase = TransactionPhase.AFTER_COMMIT)
+    public void handleAnonymizeAccount(OnAccountAnonymizedEvent event) {
+        log.info("Listener handling anonymized account for user: {}", event.getUsername());
+        // email service call
+        emailService.sendAccountDeletionConfirmationEmail(event.getEmail(), event.getUsername());
+
+    }
 }

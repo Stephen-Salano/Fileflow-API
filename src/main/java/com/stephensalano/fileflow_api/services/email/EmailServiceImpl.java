@@ -162,6 +162,23 @@ public class EmailServiceImpl implements EmailService{
         }
     }
 
+    @Override
+    @Async("emailTaskExecutor")
+    public void sendAccountDeletionConfirmationEmail(String to, String username) {
+        try{
+
+            Context context = createBaseContext(username);
+            // processing the HTML template
+            String emailContent = templateEngine.process("account-deleted-email", context);
+            MimeMessage message = createMimeMessage(to, "Your " + appName + " Account Has Been Deleted", emailContent);
+            mailSender.send(message);
+            log.info("Account deletion confirmation email sent to: {}", to);
+        } catch (MessagingException e) {
+            log.error("Failed to send account deletion email to {}: {}", to, e.getMessage(), e);
+        }
+
+    }
+
     // Helper method for message creation
     private MimeMessage createMimeMessage(String to, String subject, String emailContent) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();

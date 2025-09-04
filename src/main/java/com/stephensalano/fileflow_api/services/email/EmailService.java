@@ -49,4 +49,11 @@ public interface EmailService {
      * @param securityContext  contexual info about the request (IP, browser, etc.)
      */
     void sendAccountLockoutEmail(String to, String username, SecurityContext securityContext);
+
+    /**
+     * This method will send and account deleted confirmation email to the user
+     * @param to recipient's user email address
+     * @param username the recipients username
+     */
+    void sendAccountDeletionConfirmationEmail(String to, String username);
 }
